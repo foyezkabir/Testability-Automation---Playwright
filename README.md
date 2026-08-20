@@ -141,8 +141,8 @@ on any failed test, so evidence survives the next run wiping `test-results/`.
 ### CI (bonus 4.8)
 
 [.github/workflows/playwright.yml](.github/workflows/playwright.yml) runs lint + typecheck,
-then a three-browser matrix (`fail-fast: false`), uploads reports and failure artifacts,
-and publishes the HTML report to Pages.
+then a three-browser matrix (`fail-fast: false`), and uploads the HTML report plus - on
+failure - traces, videos and screenshots as downloadable run artifacts.
 
 **Nothing to configure to review this suite.** The workflow is already set up in this
 repository and its runs are visible under the Actions tab. Reviewing the code locally needs
