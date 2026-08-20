@@ -1,0 +1,38 @@
+{
+  "name": "testability-assignment-qa---playwright",
+  "version": "1.0.0",
+  "description": "A Playwright end-to-end test-automation project built around the **`qa-scripter`** agent. It turns a **Jira ticket**, **Figma design**, **Gherkin scenario**, **pasted requirement**, or the **live UI** into maintainable Playwright tests using a **Strict Decoupled Page Object Model**.",
+  "main": "index.js",
+  "scripts": {
+    "test": "playwright test",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test:smoke": "playwright test --grep @smoke",
+    "test:critical": "playwright test --grep @critical",
+    "test:chromium": "playwright test --project=chromium",
+    "report": "playwright show-report"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/foyezkabir/QA-Scripter.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/foyezkabir/QA-Scripter/issues"
+  },
+  "homepage": "https://github.com/foyezkabir/QA-Scripter#readme",
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@faker-js/faker": "^10.6.0",
+    "@playwright/test": "^1.62.1",
+    "@types/node": "^26.2.0",
+    "dotenv": "^17.4.2",
+    "eslint": "^10.8.1",
+    "playwright-smart-reporter": "^2.1.0",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.67.0"
+  }
+}

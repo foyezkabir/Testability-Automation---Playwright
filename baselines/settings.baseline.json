@@ -1,0 +1,106 @@
+{
+  "module": "settings",
+  "route": "/settings",
+  "createdAt": "2026-08-20",
+  "updatedAt": "2026-08-20",
+  "buildRef": "Testability assignment - conduit.bondaracademy.com @ 2026-08-20",
+  "headings": ["Your Settings"],
+  "tabs": [],
+  "states": [
+    {
+      "name": "populated",
+      "reached": true,
+      "how": "Logged in via storageState and loaded /settings; the form renders. NOTE: 'populated' means the form is RENDERED, not that it holds values - all five fields render EMPTY even though GET /api/user returns them (see findings/settings.txt FINDING 2). Independently re-verified with a direct Playwright probe: all five inputValue() returned ''."
+    },
+    {
+      "name": "loading",
+      "reached": true,
+      "how": "Throttled GET /api/user by 3s and sampled at ~700ms: form count=0, h1 count=0, and zero spinner/[role=progressbar]/[class*=loading] elements. The loading state is a BLANK content area with no indicator - the whole view including the heading renders only after the user call resolves."
+    },
+    {
+      "name": "error",
+      "reached": true,
+      "how": "Set username to an already-taken value ('Artem Bondar'); PUT /api/user returned 500 with a raw Prisma body. The app stayed on /settings and kept the typed values, but ul.error-messages rendered EMPTY - a server error surfaces NO visible message."
+    },
+    {
+      "name": "disabled/invalid",
+      "reached": true,
+      "how": "Two probes, both of which SAVED instead of blocking. (a) empty username -> PUT 200, redirect, no error (server silently discards the empty value and keeps the old username - re-verified directly against the API). (b) email 'notanemail' -> PUT 200 and the invalid value PERSISTED. The form carries novalidate, the Email input is type=email so native validation is bypassed, and Update Settings is never disabled. There is NO client-side validation on this surface."
+    },
+    {
+      "name": "terminal",
+      "reached": true,
+      "how": "A successful Update Settings navigates AWAY from /settings to /profile/<username>; no success toast or inline confirmation on either page. Logout clears localStorage jwtToken and redirects to /, nav reverting to conduit/Home/Sign in/Sign up."
+    },
+    {
+      "name": "role-gated:anonymous",
+      "reached": true,
+      "how": "After logout, navigating directly to /settings redirects to / - the route is guarded for unauthenticated users."
+    },
+    {
+      "name": "empty",
+      "reached": false,
+      "why": "Not a distinct state on this surface. /settings is a single fixed form with no collections, tables or lists that could be empty; the closest thing (all fields blank) is the app's actual default render and is recorded under 'populated' instead."
+    }
+  ],
+  "tables": [],
+  "fields": [
+    { "label": "URL of profile picture", "type": "textbox", "accessibleNameSource": "placeholder", "htmlTag": "input", "inputType": "text", "prefilled": false, "order": 1 },
+    { "label": "Username", "type": "textbox", "accessibleNameSource": "placeholder", "htmlTag": "input", "inputType": "text", "prefilled": false, "expectedPrefill": "<test-account>", "order": 2 },
+    { "label": "Short bio about you", "type": "textbox", "accessibleNameSource": "placeholder", "htmlTag": "textarea", "rows": 8, "prefilled": false, "order": 3, "note": "Multiline textarea; still exposed as role=textbox" },
+    { "label": "Email", "type": "textbox", "accessibleNameSource": "placeholder", "htmlTag": "input", "inputType": "email", "prefilled": false, "expectedPrefill": "<test-account-email>", "order": 4, "note": "type=email but the form has novalidate, so the browser never blocks a malformed address" },
+    { "label": "New Password", "type": "textbox", "accessibleNameSource": "placeholder", "htmlTag": "input", "inputType": "password", "prefilled": false, "order": 5 }
+  ],
+  "actions": [
+    { "role": "button", "name": "Update Settings", "region": "form-bottom-right", "state": "enabled", "type": "submit", "note": "Never observed disabled - enabled even with every field empty. On success navigates to /profile/<username>; no success message anywhere." },
+    { "role": "button", "name": "Or click here to logout.", "region": "below-form, under an hr separator", "state": "enabled", "note": "Accessible name INCLUDES the trailing period. Sits OUTSIDE the form. Clears localStorage jwtToken and redirects to /. No confirmation dialog." },
+    { "role": "link", "name": "Settings", "region": "top-nav", "state": "active", "href": "/settings" },
+    { "role": "link", "name": "Home", "region": "top-nav", "href": "/" },
+    { "role": "link", "name": "New Article", "region": "top-nav", "href": "/editor" },
+    { "role": "link", "name": "<test-account>", "region": "top-nav-far-right", "href": "/profile/<test-account>", "note": "Current user's profile link; contains an avatar img plus the username text" },
+    { "role": "link", "name": "conduit", "region": "top-nav-left (navbar-brand)", "href": "/" },
+    { "role": "link", "name": "conduit", "region": "footer (logo-font)", "href": "/" },
+    { "role": "link", "name": "RealWorld OSS Project", "region": "footer", "href": "https://github.com/gothinkster/realworld" },
+    { "role": "link", "name": "Bondar Academy", "region": "footer", "href": "https://bondaracademy.com" }
+  ],
+  "icons": [
+    { "name": "user avatar", "type": "img", "region": "top-nav, inside the profile link", "note": "No accessible name / alt text - decorative; the link's name comes from the username text" }
+  ],
+  "modals": [],
+  "views": [],
+  "errorContainer": {
+    "selector": "ul.error-messages",
+    "role": null,
+    "ariaLive": null,
+    "presentWhenEmpty": true,
+    "emptyHtml": "<ul class=\"error-messages\"><!----></ul>",
+    "itemRole": "listitem",
+    "shape": "list (ul of li), rendered ABOVE the form and BELOW the 'Your Settings' heading",
+    "observedMessages": [],
+    "note": "Always in the DOM, so presence alone asserts nothing - assert on li text/count. Across empty-username, invalid-email and duplicate-username probes it never received a single li, so no verbatim error string exists on this surface."
+  },
+  "other": [
+    { "type": "separator", "role": "separator", "htmlTag": "hr", "region": "between Update Settings and the logout button" },
+    { "type": "form", "region": "page-center (col-md-6 offset-md-3)", "attributes": { "novalidate": true }, "note": "One form; five controls each in fieldset.form-group inside an outer fieldset. The outer fieldset is never disabled, so there is no during-submit disabled state." },
+    { "type": "layout", "note": "Single centered column. No tabs, accordions, dropdowns, selects, comboboxes, kebab/overflow menus, or tables on this surface." },
+    { "type": "api", "endpoint": "GET /api/user", "status": 200, "note": "Fires on page load and DOES return the user - the data arrives but is not bound into the form." },
+    { "type": "api", "endpoint": "PUT /api/user", "note": "Submit target. Returned 200 for empty username (change silently discarded) and for malformed email 'notanemail' (value persisted); returned 500 for a duplicate username." },
+    { "type": "auth", "note": "Session token in localStorage under key 'jwtToken' as a RAW JWT string (not JSON-encoded)." }
+  ],
+  "verifiedAbsent": [
+    { "surface": "modals", "how": "Probed both buttons - neither opens a dialog; logout acts immediately with no confirmation. No native dialog fired and no [role=dialog] node exists anywhere on the surface." },
+    { "surface": "tables", "how": "Full a11y-tree walk of the rendered surface found no table, grid, or list-of-records structure - the view is one form in a single centered column." },
+    { "surface": "tabs", "how": "No tablist/tab roles present in the a11y tree; the surface has no tabbed navigation." },
+    { "surface": "views", "how": "/settings has no sub-routes or detail pages reachable within the module. Its only outbound navigations leave the module entirely (profile page on save, / on logout)." }
+  ],
+  "changelog": [
+    {
+      "date": "2026-08-20",
+      "buildRef": "Testability assignment @ 2026-08-20",
+      "changes": [
+        "Initial baseline captured",
+        "Recorded 4 product defects to findings/settings.txt: no prefill, invalid email accepted (account lockout), empty username false-success, server error invisible + Prisma leak"
+      ]
+    }
+  ]
+}

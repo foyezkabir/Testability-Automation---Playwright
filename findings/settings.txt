@@ -1,0 +1,269 @@
+FINDINGS - Settings module
+Recorded during exploratory crawl, 2026-08-20.
+Local notes only - a human reviews and decides what to file. Nothing auto-filed.
+
+================================================================================
+FINDING 1
+================================================================================
+Title: Settings: an invalid email address is accepted and saved, locking the user
+       out of their own account
+Type: validation
+Module: settings
+Description: The Update Settings form accepts a value that is not an email address
+  (e.g. "notanemail") and persists it. Neither the client nor the server rejects
+  it. Because login authenticates on email, the account becomes unreachable with
+  the credentials the user knows - the old email no longer authenticates, and the
+  UI never shows the new value (see FINDING 2 - the field renders empty), so the
+  user cannot even discover what their email became.
+Steps to reproduce:
+  1. Log in to https://conduit.bondaracademy.com with a valid account.
+  2. Go to Settings.
+  3. Type `notanemail` into the Email field (no @, no domain).
+  4. Click "Update Settings".
+  5. Observe: no validation error; PUT /api/user returns 200 and the value is
+     persisted (response body contains "email":"notanemail").
+  6. Log out and try to sign in with the ORIGINAL email address.
+Actual result: Step 5 succeeds silently. Step 6 fails with
+  403 {"errors":{"email or password":["is invalid"]}}. The account is now only
+  reachable by logging in with the literal string "notanemail".
+Expected result: The email should be format-validated on both client and server
+  and the update rejected with a visible inline error. A change of email should
+  ideally require confirmation via the new address before taking effect.
+Confidence: high - reproduced twice, and it caused a real lockout of the test
+  account during this session, recovered only by PUT-ing the original email back
+  using a token obtained with the bad address.
+Impact: self-service account lockout with no UI recovery path. The form is
+  `novalidate` and the Email input is `type=email`, so even native browser
+  validation is deliberately bypassed.
+
+================================================================================
+FINDING 2
+================================================================================
+Title: Settings: the form renders completely empty instead of pre-filling the
+       user's current values, so saving silently wipes fields
+Type: functional
+Module: settings
+Description: On /settings all five controls (profile picture URL, Username, Short
+  bio, Email, New Password) render blank, even though the page's own
+  GET /api/user call returns 200 with the username, email and image. The response
+  data is never bound into the form. Because the form submits whatever is in the
+  inputs, a user who edits one field and saves sends empty strings for the rest.
+Steps to reproduce:
+  1. Log in with an account that has a username, email and avatar set.
+  2. Go to Settings.
+  3. Observe every field is empty.
+  4. Open devtools: GET /api/user returned 200 with the correct values.
+Actual result: All five fields are empty. Verified three ways: reusing a saved
+  storageState, a fresh UI login, and polling the username input for a non-empty
+  value for 8s. Independently re-confirmed with a direct Playwright probe -
+  all five inputValue() calls returned "".
+Expected result: The form should pre-fill with the user's current values so that
+  editing one field does not blank the others.
+Confidence: high - reproduced by two independent methods.
+Impact: combined with FINDING 3, a user editing only their bio submits an empty
+  username and email. The server ignores the empty username but PERSISTS other
+  emptied values, so this is a silent data-loss path.
+
+================================================================================
+FINDING 3
+================================================================================
+Title: Settings: submitting an empty username returns HTTP 200 and redirects as
+       if saved, but the change is silently discarded
+Type: validation
+Module: settings
+Description: Clearing the Username and clicking Update Settings produces no error.
+  PUT /api/user returns 200 and the app redirects to the profile page as though
+  the save succeeded. The server actually ignores the empty value and keeps the
+  previous username, so the UI reports success for a change that did not happen.
+Steps to reproduce:
+  1. Log in, go to Settings.
+  2. Clear the Username field (or type a value then delete it).
+  3. Click "Update Settings".
+Actual result: PUT /api/user -> 200, redirect to /profile/<old-username>, no
+  error message. GET /api/user afterwards still shows the ORIGINAL username -
+  verified directly against the API: PUT {"user":{"username":""}} returns 200
+  and a follow-up GET still shows "<test-account>".
+Expected result: either reject the empty username with a visible inline error
+  ("Username can't be blank"), or accept it - but not report success for a
+  discarded write.
+Confidence: high - reproduced through the UI and directly against the API.
+Impact: false success. The user believes a change was saved when it was not.
+
+================================================================================
+FINDING 4
+================================================================================
+Title: Settings: a server error shows the user nothing and leaks Prisma/ORM
+       internals in the API response
+Type: error-message
+Module: settings
+Description: Submitting a username that already belongs to another user makes
+  PUT /api/user return HTTP 500. The UI stays on /settings and keeps the typed
+  values, but the ul.error-messages container renders empty - the user gets no
+  feedback at all. The raw response body exposes the ORM, the failing call, the
+  table and the constraint name.
+Steps to reproduce:
+  1. Log in, go to Settings.
+  2. Set Username to a value already taken by another user (e.g. "Artem Bondar").
+  3. Click "Update Settings".
+Actual result: PUT /api/user -> 500 with body:
+    "Invalid `prisma.user.update()` invocation:
+     Unique constraint failed on the constraint: `User_username_key`"
+  The page shows NO message; ul.error-messages stays empty (innerHTML "<!---->").
+Expected result: a 409/422 with a user-facing message such as "Username is
+  already taken", rendered in the error list. Internal ORM, table and constraint
+  names must never reach the client.
+Confidence: high - captured response body verbatim.
+Impact: two issues in one - no user feedback on failure, and information
+  disclosure about the backend stack and schema.
+
+================================================================================
+FINDING 5
+================================================================================
+Title: Settings: a populated field can never be cleared - empty values are silently
+       ignored while the API still reports success
+Type: functional
+Module: settings
+Description: Once bio (or any text field) has a value, there is no way to remove it.
+  Submitting an empty string or an explicit null returns HTTP 200 but the previous
+  value is kept. Only a non-empty string is actually written. So a user who fills in
+  a bio and later wants it gone cannot do it - and the UI reports success either way.
+Steps to reproduce (via the API, which the UI simply mirrors):
+  1. PUT /api/user {"user":{"bio":"something"}}     -> 200, bio = "something"
+  2. PUT /api/user {"user":{"bio":""}}              -> 200, bio STILL "something"
+  3. PUT /api/user {"user":{"bio":null}}            -> 200, bio STILL "something"
+  4. PUT /api/user {"user":{"bio":" "}}             -> 200, bio = " "  (accepted)
+Actual result: steps 2 and 3 report success and change nothing. Only step 4 - a
+  single space - is honoured, so "blank" is only reachable as whitespace.
+Expected result: an empty value should either clear the field or be rejected with a
+  visible message. Reporting 200 for a write that was discarded is the core problem;
+  it is the same false-success pattern as FINDING 3.
+Confidence: high - all four cases reproduced directly against the API.
+Impact: users cannot remove their own profile information. Combined with FINDING 2
+  (the form never prefills), a user cannot see what their bio currently is OR remove
+  it.
+
+CONSEQUENCE FOR THE TEST SUITE
+The `restoredProfile` teardown fixture cannot restore a field that started empty by
+sending `''` - the app would ignore it and leave the test's value in place, silently
+corrupting the shared account for every later run. The fixture therefore restores a
+single space as the closest reachable equivalent to blank, which is what the app
+itself leaves behind.
+
+================================================================================
+FINDING 6   [SEVERITY: high]
+================================================================================
+Title: Settings: a whitespace-only username crashes the server with HTTP 500 and
+       leaks the database constraint name
+Type: functional / error-handling
+Module: settings
+
+Description:
+  Submitting a username of only whitespace produces an unhandled database error.
+  The response is a raw HTTP 500 whose body names the Prisma invocation and the
+  unique constraint. The user sees nothing at all in the UI (the error container
+  on this surface never renders a message - see FINDING 4).
+
+  Worth noting how this differs from FINDING 3: an EMPTY username ("") returns
+  200 and is silently discarded, whereas a WHITESPACE username ("   ") returns
+  500. Two spellings of the same user intent, two different broken behaviours.
+
+Steps to reproduce:
+  1. PUT /api/user {"user":{"username":"   "}}
+     (or: log in, go to Settings, type three spaces into Username, click Update)
+
+Evidence:
+  REQUEST  : PUT /api/user {"user":{"username":"   "}}
+  STATUS   : 500
+  BODY     : "\nInvalid `prisma.user.update()` invocation:\n\n\n
+              Unique constraint failed on the constraint: `User_username_key`"
+
+Actual result:
+  HTTP 500 exposing the ORM, the failing call, and the constraint/table name.
+  No user-facing feedback whatsoever.
+Expected result:
+  422 with a visible message such as "Username can't be blank". Whitespace must
+  be trimmed before validation, and internal schema names must never be returned
+  to the client.
+Confidence: high - reproduced directly against the API.
+
+================================================================================
+FINDING 7   [SEVERITY: low]
+================================================================================
+Title: Settings: the profile picture field accepts any string, including values
+       that are not URLs
+Type: validation
+Module: settings
+
+Description:
+  The "URL of profile picture" field performs no format validation. An arbitrary
+  string is accepted and stored, and is then used as the avatar's image source,
+  leaving the user with a broken image across the app.
+
+Steps to reproduce:
+  1. PUT /api/user {"user":{"image":"not-a-url"}}
+     (or: log in, go to Settings, type `not-a-url` into the picture field, Update)
+
+Evidence:
+  REQUEST  : PUT /api/user {"user":{"image":"not-a-url"}}
+  STATUS   : 200
+  STORED   : image = "not-a-url"
+
+Actual result: 200, the value is persisted and used as an image source.
+Expected result: reject a value that is not a well-formed http(s) URL, with a
+  visible inline error.
+Confidence: high.
+
+================================================================================
+CASES PROBED THAT BEHAVE ACCEPTABLY (recorded so the probe is auditable)
+================================================================================
+  whitespace-only bio "   "     -> 200, stored as "   "
+        Not filed as a bug: a bio is free text and blanking it is legitimate.
+        It IS however the only way to clear the field, because "" and null are
+        both ignored - see FINDING 5.
+
+  2000-character bio            -> 200, stored in full
+        No length limit observed. Not filed: a long bio causes no error and no
+        data loss. Note the contrast with the article title (FINDING 9), where
+        the absence of a limit DOES crash the server - the bio column is simply
+        wide enough to absorb it.
+
+  HTML/script in bio            -> 200, stored raw ("<script>alert(1)</script>")
+        RESOLVED - NOT EXPLOITABLE. The render check has now been performed by an
+        automated test (TC-08 in tests/settings.spec.ts): the bio is
+        saved with the payload, the profile page that displays it is opened with a
+        native dialog listener attached, and the assertion is that no dialog
+        fires. The test PASSES - Angular escapes the content. This is input
+        hygiene, not a security vulnerability. Do not report it as XSS.
+
+================================================================================
+NOT YET PROBED - known gaps, listed so they are not mistaken for "tested and fine"
+================================================================================
+  - username boundaries: max length, unicode, punctuation, leading/trailing space
+  - taking another user's existing username (expected to 500, per FINDING 4)
+  - password field: min length, whitespace-only, and whether a changed password
+    actually takes effect. NOT probed deliberately - changing the password of the
+    single shared .env account would invalidate the credentials global-setup uses
+    and break every subsequent run.
+  - email boundaries beyond the invalid-format case already filed as FINDING 1.
+    Deliberately limited: a bad email locks the account out of login.
+  - concurrent profile updates from two sessions
+
+================================================================================
+CROSS-CUTTING NOTE - no error feedback anywhere on this surface
+================================================================================
+Across three separate failure probes (empty username, malformed email, duplicate
+username) the `ul.error-messages` list NEVER received a single <li>. The container
+is always present in the DOM even when empty, so asserting its presence proves
+nothing - a test must assert on `li` count or text. There is no toast, no banner
+and no inline per-field error on /settings. Success is equally silent: a valid
+save just redirects to /profile/<username> with no confirmation message.
+
+CONSEQUENCE FOR THE TEST SUITE
+- The Settings negative test asserts on the OUTCOME (no navigation away from
+  /settings, or the value not persisting) rather than on error text, because the
+  app renders no error text to assert on.
+- The positive test must TYPE every field it cares about; it cannot rely on
+  prefilled values (FINDING 2), and it verifies persistence by re-reading the
+  saved state rather than trusting the redirect.
+- The negative test must NOT use an invalid email (FINDING 1) - that would
+  destroy the shared account the whole suite authenticates with.

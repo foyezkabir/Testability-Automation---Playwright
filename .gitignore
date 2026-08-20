@@ -1,0 +1,26 @@
+# secrets & sessions
+.env
+.auth/
+
+# dependencies & build
+node_modules/
+dist/
+
+# test run artifacts
+test-results/
+playwright-report/
+smart-report.html
+test-history.json
+failures/
+
+# baselines are text-only; never images
+baselines/**/*.png
+
+# local-only working files
+ASSIGNMENT.txt
+.claude/settings.local.json
+agent-enhancements.txt
+claude-code-extensibility-reference.txt
+
+# Playwright MCP scratch output
+.playwright-mcp/

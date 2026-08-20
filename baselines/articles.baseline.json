@@ -1,0 +1,205 @@
+{
+  "module": "articles",
+  "route": "/",
+  "createdAt": "2026-08-20",
+  "updatedAt": "2026-08-20",
+  "buildRef": "Testability assignment - conduit.bondaracademy.com @ 2026-08-20",
+  "headings": [
+    "Article preview title (h1, one per article card - NOT a page heading; the logged-in home page has no h1/h2 of its own)"
+  ],
+  "tabs": ["Your Feed", "Global Feed", "#<tag> (third tab, hidden until a sidebar tag is clicked)"],
+  "activeTabByDefault": "Global Feed",
+  "states": [
+    {
+      "name": "populated",
+      "reached": true,
+      "how": "Loaded / with a saved session. 'Global Feed' is active by default and rendered 10 .article-preview cards with pagination [1,2]."
+    },
+    {
+      "name": "tag-filtered",
+      "reached": true,
+      "how": "Clicked the 'Coding' pill in the Popular Tags sidebar. A pre-existing hidden THIRD tab became visible reading '#Coding' (ion-pound icon + tag text) and took .active; both other tabs lost it. Article list narrowed (10 -> 2 on re-verification) and pagination collapsed to [1]. URL did NOT change - stayed / with no query string (client-side state only). Independently re-verified: feed-toggle innerText became 'Your Feed | Global Feed |  Coding'."
+    },
+    {
+      "name": "empty",
+      "reached": true,
+      "how": "Clicked 'Your Feed'. The account follows nobody, so the feed rendered a single .article-preview containing only the verbatim text 'No articles are here... yet.' - no cards, no pagination."
+    },
+    {
+      "name": "loading",
+      "reached": true,
+      "how": "Delayed **/api/articles** by 3s via route interception and read the feed 800ms after navigation: a visible element in .col-md-9 shows the verbatim text 'Loading articles...'. The sidebar has a matching (normally hidden) 'Loading tags...' element."
+    },
+    {
+      "name": "role-gated:anonymous",
+      "reached": true,
+      "how": "Observed / before authenticating: nav shows Home / Sign in / Sign up instead of New Article / Settings / username, and a .banner hero appears with h1 'conduit' and text 'A place to learn and practice test automation.'. Once logged in the .banner count is 0 - the hero disappears entirely."
+    },
+    {
+      "name": "error",
+      "reached": false,
+      "why": "No error surface is reachable read-only on the feed; forcing a 500 from the articles endpoint would require request interception beyond passive crawling."
+    },
+    {
+      "name": "disabled/invalid",
+      "reached": false,
+      "why": "No disabled or invalid control exists on the logged-in home feed - every tab, tag pill, favorite button and pagination button is enabled. (The editor surface DOES have an invalid state; it is recorded in views[] below.)"
+    },
+    {
+      "name": "terminal",
+      "reached": false,
+      "why": "A feed list has no terminal state - it is a browsable index with no completion or end-of-lifecycle condition."
+    }
+  ],
+  "tables": [],
+  "lists": [
+    {
+      "name": "Article feed (list of .article-preview cards)",
+      "cardStructure": {
+        "authorAvatarLink": { "role": "link", "accessibleName": "", "note": "image-only link with NO accessible name - href /profile/<author>" },
+        "authorNameLink": { "role": "link", "cls": "author", "href": "/profile/<author>" },
+        "date": { "role": "StaticText", "cls": "date", "format": "MMMM D, YYYY" },
+        "favoriteButton": { "role": "button", "accessibleName": " <count>", "note": "accessible name is the COUNT ONLY, prefixed by a space from the ion-heart icon (e.g. ' 2208', ' 0'). This collides with pagination button names - see notes." },
+        "previewLink": { "role": "link", "cls": "preview-link", "href": "/article/<slug>", "note": "wraps title + description + 'Read more...' + tags, so its accessible name is the whole concatenated card text" },
+        "title": { "role": "heading", "level": 1, "note": "each card contributes an h1; 10 cards = 10 h1 elements" },
+        "description": { "role": "StaticText", "element": "p" },
+        "readMore": { "role": "StaticText", "text": "Read more...", "element": "span" },
+        "tagPills": { "role": "listitem", "element": "li.tag-default.tag-pill.tag-outline", "note": "per-card tags are non-interactive <li> INSIDE the preview link - distinct from the sidebar's <a> pills" }
+      },
+      "rowActions": ["Favorite/like (heart + count)", "Open article via preview link", "Open author profile via name link", "Open author profile via avatar link"],
+      "hasRowMenu": false,
+      "countOnPage1": 10
+    }
+  ],
+  "fields": [],
+  "actions": [
+    { "role": "link", "name": "conduit", "region": "top-left navbar brand", "state": "enabled", "href": "/" },
+    { "role": "link", "name": "Home", "region": "top-nav", "state": "enabled", "href": "/" },
+    { "role": "link", "name": " New Article", "region": "top-nav", "state": "enabled", "href": "/editor", "note": "accessible name has a LEADING SPACE from the decorative ion-compose icon; non-exact getByRole matching still works, { exact: true } would fail" },
+    { "role": "link", "name": " Settings", "region": "top-nav", "state": "enabled", "href": "/settings", "note": "leading space from ion-gear-a icon" },
+    { "role": "link", "name": "<test-account>", "region": "top-nav-far-right", "state": "enabled", "href": "/profile/<test-account>" },
+    { "role": "generic", "name": "Your Feed", "region": "feed tab row", "state": "enabled", "element": "a.nav-link (NO href, NO role attribute)", "note": "NOT role-addressable. Verified live: getByRole('tab') = 0, getByRole('link', { name: 'Global Feed' }) = 0. Must be reached by text scoped into .feed-toggle." },
+    { "role": "generic", "name": "Global Feed", "region": "feed tab row", "state": "enabled (active by default)", "element": "a.nav-link.active (NO href)", "note": "same constraint; .feed-toggle scoped getByText resolves to exactly 1" },
+    { "role": "generic", "name": "#<tag> tag tab", "region": "feed tab row, third position", "state": "hidden by default; appears and becomes active after a sidebar tag click", "element": "li.nav-item[hidden] > a.nav-link > i.ion-pound", "note": "The '#' is an icon font, not a literal character - the text is the bare tag name. Exists in the DOM with hidden='' before any tag click, and is re-hidden when another tab is selected." },
+    { "role": "generic", "name": "Popular tag pill (sidebar)", "region": "right sidebar", "count": 10, "state": "enabled", "element": "a.tag-default.tag-pill (NO href, NO role)", "note": "NOT role-addressable (verified: getByRole('link', { name: 'Coding', exact: true }) = 0). Text is whitespace-padded (' Coding '). CAUTION: getByText('Coding', { exact: true }) matches 3 elements (sidebar pill + in-card tag + tag tab) - MUST scope to .sidebar." },
+    { "role": "button", "name": "Pagination page 1", "accessibleName": "1", "region": "pagination", "state": "enabled (active on load)", "element": "button.page-link", "note": "The control's ACTUAL accessible name is the bare digit '1' - it has no aria-label. Named descriptively here so the control is auditable; a screen reader announces only '1', which is itself the accessibility defect recorded as FINDING 6." },
+    { "role": "button", "name": "Pagination page 2", "accessibleName": "2", "region": "pagination", "state": "enabled", "element": "button.page-link", "note": "Actual accessible name is the bare digit '2'. MUST use exact: true or scope to ul.pagination - verified live that getByRole('button', { name: '2' }) non-exact matches 4 elements (favorite counts ' 2208', ' 247', ' 72' plus this page button)." },
+    { "role": "button", "name": "Favorite/like (heart + count)", "region": "article card top-right", "count": 10, "state": "enabled", "element": "app-favorite-button > button.btn.btn-sm.btn-outline-primary" },
+    { "role": "link", "name": "conduit", "region": "footer", "href": "/" },
+    { "role": "link", "name": "RealWorld OSS Project", "region": "footer", "href": "https://github.com/gothinkster/realworld" },
+    { "role": "link", "name": "Bondar Academy", "region": "footer", "href": "https://bondaracademy.com" }
+  ],
+  "icons": [
+    { "name": "ion-compose (New Article)", "type": "icon-in-link", "region": "top-nav" },
+    { "name": "ion-gear-a (Settings)", "type": "icon-in-link", "region": "top-nav" },
+    { "name": "img.user-pic (user avatar)", "type": "icon-image", "region": "top-nav before username" },
+    { "name": "ion-heart (favorite)", "type": "icon-in-button", "region": "article card top-right", "count": 10 },
+    { "name": "ion-pound (# on tag tab)", "type": "icon-in-tab", "region": "feed tab row, hidden until a tag is clicked" },
+    { "name": "author avatar img", "type": "icon-image-link", "region": "article card top-left", "count": 10, "note": "wrapped in a profile link with NO accessible name" },
+    { "name": "ion-close-round (tag pill remove, editor only)", "type": "icon-element", "region": "inside each editor tag pill", "note": "bare <i> with no role, no aria-label, no text - absent from the a11y tree entirely. Must be chained from the pill text via CSS (justifying comment required)." }
+  ],
+  "sidebar": {
+    "heading": "Popular Tags",
+    "headingElement": "p (NOT a heading role - verified live that getByRole('heading', { name: 'Popular Tags' }) = 0)",
+    "region": "right column",
+    "tags": ["Test", "Blog", "Coding", "YouTube", "Git", "Bondar Academy", "Slack", "Zoom", "GitHub", "Value-Focused"],
+    "tagCount": 10,
+    "hiddenStateTemplates": ["Loading tags...", "No tags are here... yet."]
+  },
+  "pagination": {
+    "present": true,
+    "element": "ul.pagination > li.page-item > button.page-link",
+    "region": "bottom of the feed column",
+    "pagesOnGlobalFeed": ["1", "2"],
+    "activeIndicator": "li.page-item.active",
+    "pageSize": 10,
+    "behaviour": "Real <button> elements. Clicking a page replaces the list and moves the active class; the URL never changes. Page count shrinks to ['1'] under a tag filter and pagination is absent entirely in the empty 'Your Feed' state."
+  },
+  "modals": [],
+  "views": [
+    {
+      "name": "New Article editor",
+      "route": "/editor",
+      "openedBy": "Click the ' New Article' nav link, or navigate directly to /editor (both verified working)",
+      "headings": [],
+      "tabs": [],
+      "states": [
+        { "name": "empty", "reached": true, "how": "Landed on /editor; all four inputs empty, tag-list renders as an empty div, ul.error-messages renders empty. Publish Article is ENABLED even on an empty form." },
+        { "name": "populated", "reached": true, "how": "Filled title/description/body and added two tag pills via Enter; pills rendered in insertion order and the tag input cleared to '' after each Enter. Independently re-verified." },
+        { "name": "loading", "reached": true, "how": "Polled the Publish button's disabled property across a submit: [false,true,true,true,false] - transiently disabled ~240ms while the POST is in flight. No spinner, no aria-busy, no overlay." },
+        { "name": "error", "reached": true, "how": "Clicked Publish on an EMPTY form. No client-side block: POST /api/articles/ returns 422 {\"errors\":{\"title\":[\"can't be blank\"]}}, the page STAYS on /editor and renders exactly ONE <li>: 'title can't be blank'. Errors come one at a time in server field order (title -> description -> body). Independently re-verified: network ['POST 422'], 1 li, text \"title can't be blank\"." },
+        { "name": "disabled/invalid", "reached": true, "how": "Publish Article is NEVER disabled by validation - enabled on a pristine empty form and still enabled after a 422. No input carries `required`, none receives ng-invalid, and there is no field-level inline error or aria-invalid. Error text also PERSISTS after correcting the field; it clears only on the next submit." },
+        { "name": "terminal", "reached": true, "how": "Published a fully-filled article: redirected to /article/<slug> (slug = title-slugified + '-64987'), the h1 showed the title, the body text rendered in .article-content, and the tag pill appeared on the detail page. Verified end to end, then the probe article was deleted via API." },
+        { "name": "role-gated:anonymous", "reached": false, "why": "The editor was crawled only as the authenticated user; logged-out behaviour on /editor was not probed, so it is not claimed." }
+      ],
+      "tables": [],
+      "fields": [
+        { "label": "Article Title", "type": "textbox", "accessibleNameSource": "placeholder", "htmlTag": "input", "formControlName": "title", "required": false, "serverErrorText": "title can't be blank" },
+        { "label": "What's this article about?", "type": "textbox", "accessibleNameSource": "placeholder", "htmlTag": "input", "formControlName": "description", "required": false, "serverErrorText": "description can't be blank" },
+        { "label": "Write your article (in markdown)", "type": "textbox", "multiline": true, "accessibleNameSource": "placeholder", "htmlTag": "textarea", "rows": 8, "formControlName": "body", "required": false, "serverErrorText": "body can't be blank" },
+        { "label": "Enter tags", "type": "textbox", "accessibleNameSource": "placeholder", "htmlTag": "input", "formControlName": null, "required": false, "note": "NOT an Angular form control - a standalone input whose Enter keypress pushes into a separate tag array. Never blocks submit; a tag left un-entered in the box is discarded." }
+      ],
+      "actions": [
+        { "role": "button", "name": "Publish Article", "region": "form-bottom-right", "state": "enabled", "note": "Enabled unconditionally, never gated by form validity. Transiently disabled only while POST /api/articles/ is in flight." },
+        { "role": "textbox", "name": "Enter tags", "region": "form-fourth-row", "interaction": "press Enter", "state": "enabled",
+          "opens": { "type": "tag-pill",
+            "behaviour": "Typing then Enter appends a removable pill to div.tag-list and clears the input. Verified live with two tags: add both, then remove the first by clicking its ion-close-round icon - the list went from 'alpha beta' to 'beta'.",
+            "items": [
+              { "role": "generic", "name": "<tag text>", "element": "span.tag-default.tag-pill", "note": "innerHTML is '<i class=\"ion-close-round\"></i> <tag> '; the pill has NO accessible name and appears in the a11y tree only as flat text" },
+              { "role": "none", "name": "remove (ion-close-round)", "element": "i.ion-close-round", "note": "no role/aria-label/text - reach it as .tag-list .tag-pill filtered by hasText, then the icon class" }
+            ] } }
+      ],
+      "icons": [
+        { "name": "ion-close-round (tag pill remove)", "type": "icon-element", "region": "inside each tag pill, leading position", "accessibleName": null, "note": "TESTABILITY GAP - not in the a11y tree at all; requires a CSS chain with a justifying comment" }
+      ],
+      "modals": [],
+      "errorContainer": {
+        "selector": "ul.error-messages",
+        "role": "list",
+        "childRole": "listitem",
+        "ariaAttributes": "NONE - class only. No role, no aria-live, no aria-atomic. role=alert count on the page is 0, so failures are NOT announced assistively (accessibility finding).",
+        "emptyStateHtml": "<ul class=\"error-messages\"><!----></ul>",
+        "presentWhenEmpty": true,
+        "observedMessagesVerbatim": ["title can't be blank", "description can't be blank", "body can't be blank"],
+        "messageSemantics": "Exactly ONE <li> per failed submit - the server returns only the first failing field, so these three never appear together. ASCII apostrophe in \"can't\", not typographic."
+      },
+      "other": [
+        { "type": "form-structure", "detail": "One <form> with 5 <fieldset> elements (outer + four per-field). NO <label> exists anywhere on the surface, so getByLabel() is unusable; getByRole('textbox', { name: <placeholder> }) is the correct primary strategy and was verified to resolve 1 element for all four fields." },
+        { "type": "absent-controls", "detail": "Verified by DOM query: 0 select, 0 [role=combobox], 0 tabs, 0 accordions, 0 modals/dialogs, 0 tables, 0 kebab/overflow buttons. A right-click on the form produced 0 menus." },
+        { "type": "untested-edge", "detail": "NOT probed: whether Enter on an empty tag input adds a blank pill, and whether duplicate tag names are deduplicated. Flagged rather than asserted." }
+      ]
+    }
+  ],
+  "other": [
+    { "type": "empty-state-message", "text": "No articles are here... yet.", "element": "div.article-preview", "region": "feed area", "note": "verbatim; seen on 'Your Feed' for an account following nobody" },
+    { "type": "loading-message", "text": "Loading articles...", "region": "feed area", "note": "verbatim; visible only while GET /api/articles is in flight" },
+    { "type": "loading-message", "text": "Loading tags...", "region": "right sidebar", "note": "verbatim; in the DOM with hidden='' once tags have loaded" },
+    { "type": "empty-state-message", "text": "No tags are here... yet.", "region": "right sidebar", "note": "verbatim; in the DOM with hidden='' - not reachable while the API returns tags" },
+    { "type": "footer-text", "text": "conduit © 2026. An interactive learning project from RealWorld OSS Project. Code licensed under MIT. Hosted by Bondar Academy." },
+    { "type": "anonymous-only-hero", "region": "top of page, logged out only", "heading": "conduit (h1)", "text": "A place to learn and practice test automation.", "note": ".banner count is 0 once logged in" },
+    { "type": "no-search", "note": "ZERO form controls on the feed surface: input/select/textarea/[role=combobox] count = 0. No search box, no sort dropdown, no filter select - the ONLY filtering affordance is the sidebar tag pills." },
+    { "type": "page-title", "text": "Conduit | Practice Test Automation" },
+    { "type": "api", "endpoint": "POST /api/articles/", "note": "Editor submit target (trailing slash). 422 with {\"errors\":{\"<field>\":[\"can't be blank\"]}} for blank fields; on success returns the created article and the app redirects to /article/<slug>." },
+    { "type": "api", "endpoint": "GET /api/articles?tag=<tag>", "note": "Tag filtering. NOTE: indexing lags - immediately after seeding, a tag query can return 0 and then the article appears. Tests must settle with expect.poll rather than asserting once." },
+    { "type": "slug-derivation", "note": "The slug is derived from the title as '<Title-Slugified>-<userId>' (e.g. 'Probe-Publish-mt1i2t7e-64987'). Editing a title through the UI CHANGES the slug, so teardown cannot assume the seeded slug still exists." },
+    { "type": "data-instability", "note": "The global feed mixes articles from other activity above the fixed Artem Bondar seed articles. Article count, page count and first-card identity are NOT stable - never assert absolute counts or .first() card content." }
+  ],
+  "verifiedAbsent": [
+    { "surface": "tables", "how": "DOM query for table/[role=table]/[role=grid] returned 0 on both the feed and the editor - the feed is a list of div.article-preview cards, recorded under lists[]." },
+    { "surface": "modals", "how": "'.modal, [role=dialog]' count = 0 on the feed and the editor; a right-click on both surfaces opened no menu. Nothing on either surface opens a dialog." },
+    { "surface": "fields (home feed)", "how": "input/select/textarea/[role=combobox] count = 0 on the logged-in feed - there is genuinely no search, sort or filter control other than the tag pills." },
+    { "surface": "row menus", "how": "Hovering an article card produced no DOM change (no hidden row actions) and right-clicking opened no menu ([role=menu], .dropdown-menu count = 0), so hasRowMenu is false rather than unlooked-at." }
+  ],
+  "changelog": [
+    {
+      "date": "2026-08-20",
+      "buildRef": "Testability assignment @ 2026-08-20",
+      "changes": [
+        "Initial baseline captured (home feed + tag sidebar + pagination, and the /editor sub-view)",
+        "Recorded that feed tabs and sidebar tag pills are NOT role-addressable (no href, no role) - locators must scope by text into .feed-toggle / .sidebar",
+        "Recorded that editor validation is entirely server-side (422, one error at a time), and that Publish is never disabled",
+        "CORRECTION to an initial crawl report: direct page.goto('/editor') does NOT redirect to /. Re-verified twice - the surface loads fine on a hard navigation. The original report's redirect claim was a race in that agent's own login flow, not app behaviour."
+      ]
+    }
+  ]
+}

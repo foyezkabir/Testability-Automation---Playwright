@@ -1,0 +1,64 @@
+Traceability - settings module                              generated 2026-08-20
+Source of requirements: Testability assignment brief (ASSIGNMENT.txt), not a Jira
+ticket - so the left column is the brief's own requirement, not an AC id.
+
+REQUIRED SCENARIOS (brief section 2 - one POSITIVE test case each)
+-------------------------------------------------------------------------------
+REQ-2.5  Update User Settings                  -> TC-01    @smoke @critical
+
+NEGATIVE CASES (brief section 4.3 - at least one per scenario)
+-------------------------------------------------------------------------------
+REQ-4.3e Update User Settings - negative       -> TC-02    @regression
+                                                  (blank username must not
+                                                   overwrite the stored one)
+
+ADDITIONAL COVERAGE (not required by the brief, from the crawl)
+-------------------------------------------------------------------------------
+        Settings route is auth-guarded          -> TC-03    @critical
+
+INPUT VALIDATION & BOUNDARIES (beyond the brief's "at least one negative")
+-------------------------------------------------------------------------------
+The brief asks for one negative case per scenario, which TC-02 satisfies. The
+rows below go further. Evidence: findings/settings.txt
+
+  Whitespace-only username        -> TC-04  @regression @known-defect  FIXME
+  Invalid profile picture URL     -> TC-05  @regression @known-defect  FIXME
+  Form repopulates on return      -> TC-06  @regression @known-defect  FIXME
+  Long bio (2000 chars)           -> TC-07  @regression
+  Script markup in bio (XSS)      -> TC-08  @critical
+  Whitespace-only bio             -> TC-09  @regression
+
+FIXME rows use test.fixme: they assert what the app SHOULD do, are reported as
+expected-to-fail rather than executed, and do not turn the suite red. Remove the
+fixme line once the defect is fixed and the test starts guarding it.
+List them with: npx playwright test --grep @known-defect
+
+Coverage: 1/1 required scenario (100%) · 1/1 negative case (100%) · 0 gaps
+Tests in this module: 9 (6 executed, 3 test.fixme documenting known defects)
+
+NOT COVERED, AND WHY (recorded so absence is deliberate, not an oversight)
+-------------------------------------------------------------------------------
+- EMAIL field: deliberately never submitted with an invalid value. The app persists
+  a malformed email with no validation, which locks the account out of login -
+  it happened during the crawl and had to be recovered via the API
+  (findings/settings.txt FINDING 1). A negative test must never destroy the
+  credentials the whole suite authenticates with. The field is recorded in the
+  baseline and left untouched.
+- NEW PASSWORD field: changing the password of the one shared .env account would
+  invalidate the credentials global-setup.ts logs in with and break every
+  subsequent run. Recorded in the baseline, deliberately untested.
+- Logout as a scenario in its own right - not one of the five in the brief. It is
+  used as a step in TC-03 to reach the logged-out state.
+
+KNOWN PRODUCT DEFECTS AFFECTING REQ-2.5
+-------------------------------------------------------------------------------
+Four defects on this surface shape how these tests assert (findings/settings.txt):
+  1. The form never prefills, so TC-01 types every value it asserts on.
+  2. An invalid email is accepted and persisted -> excluded from testing (above).
+  3. A blank username returns 200 and redirects as success while discarding the
+     change -> TC-02 asserts the stored value is unchanged, not an error message.
+  4. A field cannot be cleared: '' and null are ignored with a 200 -> the teardown
+     fixture restores a single space rather than an empty string.
+Across every failure mode probed, the app renders NO error text at all, so no test
+here can assert on a validation message - there is none to assert on. Each test
+asserts the OUTCOME instead.

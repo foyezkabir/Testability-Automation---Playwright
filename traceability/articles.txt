@@ -1,0 +1,82 @@
+Traceability - articles module                              generated 2026-08-20
+Source of requirements: Testability assignment brief (ASSIGNMENT.txt), not a Jira
+ticket - so the left column is the brief's own requirement, not an AC id.
+
+REQUIRED SCENARIOS (brief section 2 - one POSITIVE test case each)
+-------------------------------------------------------------------------------
+REQ-2.1  Create New Article                    -> TC-01    @smoke @critical
+REQ-2.2  Edit Article (article via API)        -> TC-03    @critical
+REQ-2.3  Delete Article (article via API)      -> TC-05    @critical
+REQ-2.4  Filter Articles by Tag                -> TC-07    @smoke
+
+NEGATIVE CASES (brief section 4.3 - at least one per scenario)
+-------------------------------------------------------------------------------
+REQ-4.3a Create New Article - negative         -> TC-02    @regression
+                                                  (empty form rejected, 422)
+REQ-4.3b Edit Article - negative               -> TC-04    @regression
+                                                  (blank title must not overwrite)
+REQ-4.3c Delete Article - negative             -> TC-06    @regression
+                                                  (non-author cannot delete: the
+                                                   owner controls are absent)
+REQ-4.3d Filter by Tag - negative              -> TC-08    @regression
+                                                  (unknown tag returns nothing)
+
+ADDITIONAL COVERAGE (not required by the brief, from the crawl)
+-------------------------------------------------------------------------------
+        Tag pill removal in the editor         -> TC-09    @regression
+
+INPUT VALIDATION & BOUNDARIES (beyond the brief's "at least one negative")
+-------------------------------------------------------------------------------
+The brief asks for one negative case per scenario, which TC-02/04/06/08 satisfy.
+The rows below go further, probing boundaries and malformed input. Evidence for
+each: findings/articles.txt
+
+  Whitespace-only article           -> TC-10  @regression @known-defect  FIXME
+  Whitespace description/body       -> TC-11  @regression @known-defect  FIXME
+  Title over the length limit (186) -> TC-12  @regression @known-defect  FIXME
+  Title at the limit (185)          -> TC-13  @regression
+  Duplicate title                   -> TC-14  @regression
+  Single-character title            -> TC-15  @regression
+  Unicode + emoji title             -> TC-16  @regression
+  SQL-like text in a title          -> TC-17  @regression @critical
+  Script markup rendering (XSS)     -> TC-18  @critical
+  Duplicate tags                    -> TC-19  @regression @known-defect  FIXME
+  Whitespace-only tag               -> TC-20  @regression @known-defect  FIXME
+  Large tag count (50)              -> TC-21  @regression
+
+FIXME rows use test.fixme: they assert what the app SHOULD do, are reported as
+expected-to-fail rather than executed, and do not turn the suite red. Remove the
+fixme line once the defect is fixed and the test starts guarding it.
+List them with: npx playwright test --grep @known-defect
+
+API PRE-CONDITION REQUIREMENT (brief section 2, explicit)
+-------------------------------------------------------------------------------
+"Create the article via API as a pre-condition" for Edit and Delete:
+  TC-03 (Edit)   - uses the `seededArticle` fixture -> POST /api/articles
+  TC-04 (Edit-)  - uses the `seededArticle` fixture -> POST /api/articles
+  TC-05 (Delete) - uses the `seededArticle` fixture -> POST /api/articles
+  TC-01 (Create) - deliberately does NOT seed via API: the article's creation IS
+                   the subject under test, so it is created through the UI and
+                   removed via API teardown (`cleanupArticle`).
+
+Coverage: 4/4 required scenarios (100%) · 4/4 negative cases (100%) · 0 gaps
+Tests in this module: 21 (16 executed, 5 test.fixme documenting known defects)
+
+NOT COVERED, AND WHY (recorded so absence is deliberate, not an oversight)
+-------------------------------------------------------------------------------
+- Comments (post / delete) - present on the article page but not one of the five
+  scenarios in the brief. Recorded in the baseline, deliberately untested.
+- Pagination - not an assignment scenario, and the global feed's contents are not
+  stable enough to assert page composition.
+- Favouriting / following - not an assignment scenario. Asserted only as PRESENT
+  in TC-06, as the inverse proof that owner controls are role-gated.
+- Loading and empty feed states - recorded in the baseline; asserting them needs
+  network throttling and neither is an assignment scenario.
+
+KNOWN PRODUCT DEFECT AFFECTING REQ-2.4
+-------------------------------------------------------------------------------
+Tag filtering does not return user-created articles at all (findings/articles.txt
+FINDING 7 - reproduced via API and UI, with polling to rule out lag). TC-07 therefore
+filters by a tag the backend does index and asserts the invariant that must hold -
+every article listed under a tag actually carries it, and the tag tab activates. The
+unmet behaviour is filed as a defect rather than encoded as a passing test.

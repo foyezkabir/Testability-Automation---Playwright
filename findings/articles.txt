@@ -1,0 +1,392 @@
+FINDINGS - Articles module (home feed, tag filter, editor)
+Recorded during exploratory crawl and a follow-up edge-case probe, 2026-08-20.
+FINDINGS 1-7 come from the UI crawl; 8-12 from direct API probes of the article
+endpoints, each with the verbatim request, status code and response body.
+Local notes only - a human reviews and decides what to file. Nothing auto-filed.
+
+================================================================================
+FINDING 1
+================================================================================
+Title: Article editor: validation errors are not announced to assistive
+       technology (no aria-live, no role=alert)
+Type: UI
+Module: articles
+Description: When a submit fails, the message is rendered into
+  `<ul class="error-messages">`. That element carries only a class - no
+  `role="alert"`, no `aria-live`, no `aria-atomic`. The page's total count of
+  `role=alert` elements is 0. A screen-reader user clicks "Publish Article",
+  the submit silently fails, and nothing is announced: no error, no focus move.
+  The same container and the same omission exist on /settings.
+Steps to reproduce:
+  1. Log in and open the article editor (/editor).
+  2. Leave every field empty and click "Publish Article".
+  3. Inspect the rendered `ul.error-messages` element.
+Actual result: The text "title can't be blank" appears visually, but the
+  container has no live-region semantics, so it is never announced. Focus stays
+  on the Publish button with no indication that anything happened.
+Expected result: The error container should carry `role="alert"` (or
+  `aria-live="assertive"`), and ideally focus should move to the first invalid
+  field. Errors should also be associated with their fields via
+  `aria-describedby` / `aria-invalid`.
+Confidence: high - verified by DOM inspection; role=alert count is 0.
+
+================================================================================
+FINDING 2
+================================================================================
+Title: Article editor: validation errors are reported one field at a time, so a
+       user with three empty fields must submit three times
+Type: validation
+Module: articles
+Description: Validation is entirely server-side. A failed submit returns 422 with
+  only the FIRST failing field, and the UI renders exactly one message. With an
+  empty form the user sees "title can't be blank"; after filling the title and
+  resubmitting they see "description can't be blank"; then "body can't be blank".
+  Three round-trips to learn three requirements.
+Steps to reproduce:
+  1. Open /editor, leave everything empty, click "Publish Article".
+  2. Observe exactly one error: "title can't be blank".
+  3. Fill only the title, submit again -> "description can't be blank".
+  4. Fill the description, submit again -> "body can't be blank".
+Actual result: One error per submit, in server field order. Verified by capturing
+  the network response each time: 422 {"errors":{"title":["can't be blank"]}} etc.
+Expected result: All failing fields should be reported together, and ideally
+  validated client-side on blur so the user is not forced into a submit loop.
+Confidence: high - all three responses captured verbatim.
+Additional issue: the error text PERSISTS after the offending field is corrected
+  - it clears only on the next submit. So the user can be looking at a valid
+  title while "title can't be blank" is still on screen.
+
+================================================================================
+FINDING 3
+================================================================================
+Title: Article editor: the "Publish Article" button is never disabled, so an
+       invalid form always costs a server round-trip
+Type: UI
+Module: articles
+Description: The Publish button is enabled unconditionally - on a pristine empty
+  form and still after a 422. No input carries `required`, none ever receives
+  `ng-invalid`, and there is no field-level inline error or `aria-invalid`. Every
+  invalid submit reaches the API.
+Actual result: `isEnabled()` returns true on an empty form and after a validation
+  failure. The only affordance is a ~240ms transient disable while the POST is in
+  flight (no spinner, no aria-busy).
+Expected result: either disable submit until the required fields are filled, or
+  validate client-side before issuing the request.
+Confidence: high - verified by polling the button's disabled property across a
+  submit cycle.
+
+================================================================================
+FINDING 4 (testability, not a user-facing defect)
+================================================================================
+Title: Feed tabs and tag pills are non-semantic anchors, so they are invisible to
+       role-based queries and to keyboard/assistive navigation
+Type: UI
+Module: articles
+Description: The feed tabs ("Your Feed", "Global Feed", the tag tab) and the ten
+  sidebar tag pills are all `<a>` elements with NO `href` and NO `role`. They are
+  clickable via JS handlers only. Consequences: they are not focusable by keyboard
+  (no href = not in the tab order), they expose no role to assistive tech, and
+  they cannot be reached by `getByRole`.
+Actual result: Verified live on the logged-in home page -
+    getByRole('tab')                                  -> 0
+    getByRole('link', { name: 'Global Feed' })        -> 0
+    getByRole('link', { name: 'Coding', exact: true })-> 0
+  The tab strip is also not marked up as a tablist (no role=tablist/tab/tabpanel).
+Expected result: tabs should be `role="tab"` inside a `role="tablist"`, and tag
+  pills should be real links (`<a href>`) or buttons, so both are keyboard
+  reachable and role-addressable.
+Confidence: high - counts verified directly against the live DOM.
+Consequence for the suite: locators for these controls must scope by text into
+  `.feed-toggle` / `.sidebar`. A bare `getByText('Coding', { exact: true })`
+  matches THREE elements (sidebar pill, in-card tag pill, and the tag tab), so
+  scoping is mandatory, not stylistic.
+
+================================================================================
+FINDING 5 (testability, not a user-facing defect)
+================================================================================
+Title: Tag pill remove control is a bare <i> icon with no accessible name
+Type: UI
+Module: articles
+Description: In the editor, each tag pill's remove control is
+  `<i class="ion-close-round">` - no role, no aria-label, no text content. It does
+  not appear in the accessibility tree at all, so a screen-reader user cannot
+  discover or operate it, and it cannot be located semantically in a test.
+Actual result: the icon must be reached by chaining from the pill's text down to
+  the CSS class, e.g.
+    locator('.tag-list .tag-pill').filter({ hasText: 'alpha' })
+      .locator('i.ion-close-round')
+  Verified working: adding [alpha, beta] then clicking alpha's icon left only beta.
+Expected result: a real `<button>` with an accessible name such as
+  "Remove tag alpha".
+Confidence: high.
+
+================================================================================
+FINDING 6
+================================================================================
+Title: Favorite-count buttons expose only a number as their accessible name,
+       colliding with pagination buttons
+Type: UI
+Module: articles
+Description: Each article card's favorite control is a button whose entire
+  accessible name is the count, prefixed by a space from the heart icon (" 2208",
+  " 0"). It conveys neither what it does nor what it applies to. It also collides
+  with the pagination buttons, whose names are bare page numbers.
+Actual result: verified live - `getByRole('button', { name: '2' })` matches FOUR
+  elements: three favorite counts (" 2208", " 247", " 72") and pagination page 2.
+Expected result: an accessible name like "Favorite this article (2208)" or an
+  `aria-label`, distinct from pagination.
+Confidence: high - count verified against the live DOM.
+Consequence for the suite: pagination must use `exact: true` or be scoped to
+  `ul.pagination`; favorite buttons must be scoped to their article card.
+
+================================================================================
+FINDING 7
+================================================================================
+Title: Tag filtering ignores user-created articles entirely - a newly published
+       article never appears under its own tag
+Type: functional
+Module: articles
+Description: `GET /api/articles?tag=<tag>` only ever returns the ten pre-seeded
+  demo articles. An article created through the UI or the API never appears under
+  its tag, even when the article itself demonstrably carries that tag. This holds
+  both for a brand-new tag and for one of the ten existing tags, and it does not
+  resolve with time - so it is not indexing lag.
+Steps to reproduce:
+  1. Create an article with tagList ["Coding"] (an existing tag).
+  2. Create another with tagList ["brandnewtag987"] (a new tag).
+  3. GET /api/articles?tag=Coding
+  4. GET /api/articles?tag=brandnewtag987
+Actual result:
+  - Step 3 returns count 1 - and it is one of the ORIGINAL seed articles
+    ("Practical Implementation of Skills..."), NOT the article just created.
+  - Step 4 returns count 0, although GET /api/articles/<slug> confirms the
+    article's tagList is exactly ["brandnewtag987"].
+  - Polled step 4 every 5s for 20s: still 0. Not lag.
+  - Reproduced through the UI too: clicking "Coding" in the sidebar lists exactly
+    one article, the original seed one.
+Expected result: an article should be returned by a query for any tag it carries.
+Expected result (secondary): GET /api/tags should include tags in use. It returns
+  a FIXED list of ten and never includes a newly created tag, so a user can create
+  a tag that is then unreachable from the UI - the sidebar is the only filtering
+  affordance on the site.
+Confidence: high - reproduced via the API and the UI, with polling to rule out lag.
+Impact: tag filtering is effectively non-functional for real content. Any user who
+  tags an article cannot find it by that tag.
+
+CONSEQUENCE FOR THE TEST SUITE
+The obvious design for the filter test - "seed an article with a unique tag, filter
+by it, assert it appears" - CANNOT pass, because the app does not do this. Writing
+that test would mean shipping a permanently red suite (or, worse, quietly weakening
+it until it passed). TC-07 instead filters by one of the ten real tags and asserts
+the invariant that IS supposed to hold: every article returned under a tag actually
+carries that tag, and the tag tab activates. The unmet behaviour is recorded here as
+a product defect rather than hidden in a skipped test.
+
+================================================================================
+FINDING 8   [SEVERITY: high]
+================================================================================
+Title: Articles: a whitespace-only article is accepted and created with an EMPTY
+       slug, producing an unreachable, unidentifiable article
+Type: validation / data integrity
+Module: articles
+
+Description:
+  Submitting an article whose title, description and body are all whitespace is
+  accepted with HTTP 201. Because the slug is derived from the title, the
+  slugified whitespace collapses to nothing and the stored slug becomes just the
+  user-id suffix - "-64987". The article is real and retrievable, but it has no
+  title to display and a malformed URL.
+  This also poisons the namespace: a SECOND whitespace-only article cannot be
+  created, because its slug would collide. The server then returns the misleading
+  error {"title":["must be unique"]} - a uniqueness error for what is really a
+  validation failure.
+
+Steps to reproduce:
+  1. POST /api/articles
+     {"article":{"title":"   ","description":"   ","body":"   ","tagList":[]}}
+
+Evidence:
+  REQUEST  : POST /api/articles {"article":{"title":"   ","description":"   ","body":"   ","tagList":[]}}
+  STATUS   : 201
+  RESPONSE : slug="-64987"  title="   "
+  VERIFY   : GET /api/articles/-64987  ->  200   (the article really exists)
+  URL      : https://conduit.bondaracademy.com/article/-64987
+  FOLLOW-UP: a second identical POST -> 422 {"title":["must be unique"]}
+
+Actual result:
+  201 Created. An article exists with a blank title and the slug "-64987".
+Expected result:
+  422 with a message such as "title can't be blank". A title consisting only of
+  whitespace must be treated as blank - the app already rejects a truly empty
+  title, so trimming before validation is the missing step.
+Confidence: high - reproduced twice, existence confirmed by a follow-up GET.
+
+Note on the existing suite: TC-02 covers the fully EMPTY form and passes, because
+the app does reject "". This whitespace variant slipped through precisely because
+"empty" and "whitespace-only" are different inputs.
+
+================================================================================
+FINDING 9   [SEVERITY: high]
+================================================================================
+Title: Articles: a title longer than 185 characters crashes the server with
+       HTTP 500 and leaks the database column name
+Type: functional / error-handling
+Module: articles
+
+Description:
+  There is no length validation on the article title. The slug is derived from the
+  title, and once the derived slug exceeds the database column width the insert
+  fails at the database layer. The user gets a raw HTTP 500 with a Prisma error
+  that names the failing invocation and the column.
+
+Steps to reproduce:
+  1. POST /api/articles with a title of 186 or more characters.
+
+Evidence - exact boundary, found by binary search:
+    title length 100  -> 201
+    title length 150  -> 201
+    title length 175  -> 201
+    title length 181  -> 201
+    title length 184  -> 201
+    title length 185  -> 201   <-- last accepted
+    title length 186  -> 500   <-- first failure
+    title length 200  -> 500
+    title length 300  -> 500
+
+  MAX ACCEPTED TITLE LENGTH = 185
+  FIRST FAILING LENGTH      = 186
+
+  RESPONSE BODY at 300 chars (verbatim):
+    "\nInvalid `prisma.article.create()` invocation:\n\n\n
+     The provided value for the column is too long for the column's type. Column: slug"
+
+  (Each probe used a unique title so a slug collision could not be mistaken for a
+  length failure.)
+
+Actual result:
+  HTTP 500 with the ORM name, the failing call, and the column name exposed.
+Expected result:
+  422 with a user-facing message such as "Title must be 185 characters or fewer",
+  and a maxlength on the input. Internal ORM and schema details must never reach
+  the client.
+Confidence: high - boundary confirmed to the exact character.
+
+================================================================================
+FINDING 10   [SEVERITY: medium]
+================================================================================
+Title: Articles: whitespace-only description and body are accepted as valid content
+Type: validation
+Module: articles
+
+Description:
+  The app rejects an empty description and an empty body ("description can't be
+  blank" / "body can't be blank"), but accepts "   " for either. The result is a
+  published article with no readable description or body.
+
+Steps to reproduce:
+  1. POST /api/articles
+     {"article":{"title":"Evidence WS Fields ZZ","description":"   ","body":"   ","tagList":[]}}
+
+Evidence:
+  REQUEST  : POST /api/articles, description="   ", body="   "
+  STATUS   : 201
+  RESPONSE : description="   "  body="   "
+
+Actual result: 201 Created, whitespace stored verbatim as the article content.
+Expected result: the same "can't be blank" errors the empty values produce -
+  validation should trim before checking.
+Confidence: high.
+
+================================================================================
+FINDING 11   [SEVERITY: low]
+================================================================================
+Title: Articles: script markup in a title is stored raw and mangled into the slug
+Type: security (needs render-side verification)
+Module: articles
+
+Description:
+  A title containing HTML/script markup is accepted and stored verbatim. The
+  slugifier does not strip it - it transliterates the angle brackets, producing a
+  slug that embeds the payload.
+  IMPORTANT: this is recorded as UNCONFIRMED for XSS. Storing markup is only a
+  vulnerability if it is rendered unescaped. Angular escapes interpolated content
+  by default, so the likely outcome is that the payload displays as literal text.
+  Verifying this needs a render check in the browser, which was NOT performed.
+
+Steps to reproduce:
+  1. POST /api/articles with title "<script>alert(1)</script>"
+
+Evidence:
+  STATUS   : 201
+  SLUG     : "lessscriptgreateralert(1)lessscriptgreater-64987"
+
+Actual result: stored raw; slug contains the transliterated payload.
+Expected result: input sanitised or rejected, and the slug generated from
+  safe characters only.
+Confidence: high for "stored raw and mangled" (directly observed).
+
+RESOLVED - NOT EXPLOITABLE. The render check has now been performed by an
+automated test (TC-18 in tests/articles.spec.ts): the article is
+created with the payload as its title, the detail page is opened with a native
+dialog listener attached, and the assertion is that no dialog fires and the
+markup is displayed as literal text. The test PASSES, so Angular escapes the
+content as expected and this is NOT stored XSS.
+The same check was run for the profile bio (TC-08 in
+tests/settings.spec.ts), which also passes.
+This therefore remains a LOW-severity input-hygiene issue (raw storage plus a
+mangled slug), not a security vulnerability. Do not report it as XSS.
+
+================================================================================
+FINDING 12   [SEVERITY: low]
+================================================================================
+Title: Articles: duplicate tags, whitespace-only tags, and unbounded tag counts
+       are all accepted without validation
+Type: validation
+Module: articles
+
+Description:
+  The tag list is not validated for duplicates, blank values, or size.
+
+Evidence:
+  duplicate tags   {"tagList":["zz1","zz1"]}          -> 201
+  whitespace tag   {"tagList":["   "]}                -> 201
+  50 tags          {"tagList":["t0"..."t49"]}         -> 201
+
+Actual result: all accepted.
+Expected result: de-duplicate, reject blank tags, and cap the tag count.
+Confidence: high for the observations. Severity is low - these are lenient
+  defaults rather than a break, and no data loss follows.
+
+================================================================================
+CASES PROBED THAT BEHAVE CORRECTLY (recorded so the probe is auditable)
+================================================================================
+  duplicate article title      -> 422 {"title":["must be unique"]}   CORRECT
+  single-character title "X"   -> 201, slug "X-64987"                ACCEPTABLE
+  emoji/unicode title          -> 201, slug strips to ASCII          ACCEPTABLE
+  SQL-ish title "Rob'); DROP TABLE--" -> 201, stored as literal text
+                                  (no injection observed)            ACCEPTABLE
+
+================================================================================
+NOT YET PROBED - known gaps in this probe, listed so they are not mistaken for
+"tested and fine"
+================================================================================
+  - description / body length boundaries (only the title was bounded)
+  - tag length boundary, and tag characters (unicode, punctuation)
+  - concurrent edit of the same article from two sessions
+  - editing an article INTO an invalid state (the probe covered create only,
+    except for the blank-title edit already covered by TC-04)
+  - unauthenticated and cross-user write attempts (authorisation boundaries)
+
+================================================================================
+NOTE - A CLAIM THAT DID NOT SURVIVE VERIFICATION
+================================================================================
+An initial crawl report stated that a direct `page.goto('/editor')` redirects to
+`/` because the auth guard evaluates before the token is read, and that the
+editor could only be reached by clicking the in-app nav link.
+
+This was re-tested twice and is NOT true: a hard navigation to /editor with a
+valid session loads the editor correctly (URL stays /editor, all four fields
+present). The original observation was almost certainly a race in that agent's own
+login flow rather than app behaviour. Recorded here so the incorrect claim is not
+silently carried into the test design as a workaround - no such workaround is
+needed.
