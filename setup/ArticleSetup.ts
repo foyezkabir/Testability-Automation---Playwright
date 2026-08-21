@@ -69,6 +69,29 @@ export class ArticleSetup {
     return response.ok();
   }
 
+  /**
+   * Delete every article this author owns whose slug matches one of `titles`.
+   *
+   * Matching is on the random suffix each factory title carries: the app slugifies the
+   * title unpredictably (spaces, punctuation and unicode are all transformed), so the
+   * suffix is the only part guaranteed to survive into the slug. That keeps teardown
+   * scoped to THIS test's articles, which a snapshot-diff approach could not do safely
+   * while workers run in parallel.
+   */
+  async removeByTitlePrefix(titles: readonly string[], author: string): Promise<void> {
+    if (!titles.length) {
+      return;
+    }
+
+    const response = await this.api.get(`articles?author=${encodeURIComponent(author)}&limit=100`);
+    const body = await response.json();
+    const owned = body.articles as SeededArticle[];
+    const tokens = titles.flatMap((title) => title.split(/\s+/).filter((part) => part.length >= 6));
+    const doomed = owned.filter((a) => tokens.some((token) => a.slug.includes(token)));
+
+    await this.removeMany(doomed.map((a) => a.slug));
+  }
+
   /** Every tag the app currently offers as a filter. */
   async listTags(): Promise<string[]> {
     const response = await this.api.get('tags');
@@ -83,10 +106,33 @@ export class ArticleSetup {
     return { articles: body.articles as SeededArticle[], count: body.articlesCount as number };
   }
 
-  /** The most recent article NOT written by `username` - the fixture for non-author checks. */
+  /**
+   * An article NOT written by `username`, for the non-author checks.
+   *
+   * The global feed mixes in our own articles, and the API caps the page size, so taking the
+   * first foreign entry from one page is order-dependent: in CI it returned an article we
+   * owned and the owner-controls assertion inverted. Paging until a genuinely foreign author
+   * is found makes it independent of feed ordering and of how much test data exists.
+   */
   async findArticleByAnotherAuthor(username: string): Promise<SeededArticle | undefined> {
-    const response = await this.api.get('articles?limit=20');
-    const body = await response.json();
-    return (body.articles as SeededArticle[]).find((a) => a.author.username !== username);
+    const pageSize = 20;
+
+    for (let offset = 0; offset < 100; offset += pageSize) {
+      const response = await this.api.get(`articles?limit=${pageSize}&offset=${offset}`);
+      const body = await response.json();
+      const articles = body.articles as SeededArticle[];
+
+      if (!articles.length) {
+        return undefined;
+      }
+
+      const foreign = articles.find((a) => a.author.username !== username);
+
+      if (foreign) {
+        return foreign;
+      }
+    }
+
+    return undefined;
   }
 }
