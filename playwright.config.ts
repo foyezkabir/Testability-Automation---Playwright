@@ -14,7 +14,7 @@ import { defineConfig, devices } from '@playwright/test';
  * Every one of these is overridable from the CLI without editing this file:
  *   npx playwright test --workers=4              parallel locally
  *   npx playwright test --project=firefox        a different browser
- *   npx playwright test --headed / --headed=0    force headed or headless
+ *   npx playwright test --headed                 force headed
  *   CI=1 npx playwright test                     reproduce the CI profile locally
  */
 const isCI = !!process.env.CI;

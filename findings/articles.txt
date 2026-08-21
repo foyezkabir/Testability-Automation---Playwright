@@ -339,22 +339,43 @@ mangled slug), not a security vulnerability. Do not report it as XSS.
 ================================================================================
 FINDING 12   [SEVERITY: low]
 ================================================================================
-Title: Articles: duplicate tags, whitespace-only tags, and unbounded tag counts
-       are all accepted without validation
+Title: Articles: the API stores a blank tag and enforces no tag limit, though the
+       editor UI validates both correctly
 Type: validation
 Module: articles
 
+CORRECTED 2026-08-21. The original wording of this finding claimed the editor
+accepted duplicate and whitespace tags. That was wrong: the first probe tested the
+API only, and the conclusion was carried over to the UI without checking it. Both
+were then re-verified directly.
+
 Description:
-  The tag list is not validated for duplicates, blank values, or size.
+  The API and the UI disagree. The editor validates tag input; the API does not
+  fully.
 
-Evidence:
-  duplicate tags   {"tagList":["zz1","zz1"]}          -> 201
-  whitespace tag   {"tagList":["   "]}                -> 201
-  50 tags          {"tagList":["t0"..."t49"]}         -> 201
+Evidence - EDITOR (re-verified in the browser, 2026-08-21):
+  type "dup", Enter, type "dup", Enter  -> 1 pill  ("dup")     CORRECT
+  type "   ", Enter                     -> 0 pills             CORRECT
 
-Actual result: all accepted.
-Expected result: de-duplicate, reject blank tags, and cap the tag count.
-Confidence: high for the observations. Severity is low - these are lenient
+Evidence - API (re-verified 2026-08-21):
+  POST {"tagList":["zz","zz"]}   -> 201, stored ["zz"]     de-duplicated, CORRECT
+  POST {"tagList":["   "]}       -> 201, stored [""]        blank tag STORED, WRONG
+  POST 50 tags                   -> 201, all 50 stored      no cap
+
+Actual result: the editor is correct on both counts. The API de-duplicates, but it
+  stores a whitespace tag as an empty string rather than dropping it, and it caps
+  nothing.
+Expected result: the API should trim and drop blank tags, matching the UI, and
+  should cap the tag count.
+Confidence: high - both surfaces re-verified independently. Severity stays low: a
+  user driving the UI cannot reach the bad state, and no data is lost.
+
+Consequence for the suite: TC-19 and TC-20 assert the EDITOR behaviour and now
+  PASS, so their test.fixme markers were removed - a fixme on a passing test
+  misreports the state of the app. The API-side gap has no UI test because it is
+  not reachable through the interface.
+
+Superseded note (kept so the correction is auditable): these are lenient
   defaults rather than a break, and no data loss follows.
 
 ================================================================================

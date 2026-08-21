@@ -4,14 +4,14 @@ End-to-end automation for **https://conduit.bondaracademy.com/** built with Play
 
 **30 test cases** across 2 modules. Locally they run serially in a headed Chromium so a
 run is easy to watch; CI runs all three browsers headless and fully parallel (72 runs,
-~2 min).
+~1.7 min).
 
-- **22 execute** and assert the app's behaviour.
-- **8 are `test.fixme`**, documenting known product defects: they assert the *correct*
+- **24 execute** and assert the app's behaviour.
+- **6 are `test.fixme`**, documenting known product defects: they assert the *correct*
   behaviour, report as expected-to-fail rather than red, and turn green the day each bug is
   fixed. List them with `npx playwright test --grep @known-defect`.
 
-Latest run: **54 passed · 18 skipped · 0 failed**.
+Latest run: **60 passed · 12 skipped · 0 failed**.
 (Skipped = the fixme cases, counted once per browser project.)
 
 ---
@@ -146,7 +146,7 @@ editing the config:
 ```bash
 npx playwright test --workers=4          # parallel locally
 npx playwright test --project=firefox    # a different browser
-npx playwright test --headed=0           # headless locally
+CI=1 npx playwright test                 # headless (the CI profile)
 CI=1 npx playwright test                 # reproduce the CI profile
 ```
 
@@ -217,7 +217,7 @@ Numbering restarts per module, matching the findings files.
 | 9 | A title over **185 chars** returns HTTP 500, leaking the DB column name | Boundary measured by binary search: 185 passes, 186 fails. `TC-12` asserts the fix, `TC-13` guards the accepted side |
 | 10 | Whitespace-only description and body are accepted as content | `TC-11` asserts the fix |
 | 11 | Script markup in a title is stored raw and mangled into the slug | **Verified NOT exploitable** - `TC-18` renders it with a dialog listener attached and no dialog fires |
-| 12 | Duplicate, blank and unbounded tags are all accepted | `TC-19` / `TC-20` assert the fix |
+| 12 | The **API** stores a blank tag and caps nothing; the editor UI validates both correctly | `TC-19` / `TC-20` assert the UI behaviour and pass. Original finding was API-only and has been corrected |
 
 Articles 4-6 are testability rather than user-facing issues, but they are the reason a few
 locators use a scoped CSS fallback - each carries a comment explaining why.

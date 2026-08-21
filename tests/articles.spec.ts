@@ -219,9 +219,7 @@ test('TC-18: Verify that markup in a title is not executed when the article is v
   await articlePage.expectNoScriptExecuted();
 });
 
-test('TC-19: Verify that duplicate tags on one article are de-duplicated', { tag: ['@regression', '@known-defect'] }, async ({ articlePage, cleanupArticle }) => {
-  test.fixme(true, 'findings/articles.txt FINDING 12 - the same tag can be added twice and both are kept');
-
+test('TC-19: Verify that duplicate tags on one article are de-duplicated', { tag: ['@regression'] }, async ({ articlePage, cleanupArticle }) => {
   const article = newArticle({ tagList: [...ARTICLE_EDGE.duplicateTags] });
   cleanupArticle(article.title);
 
@@ -231,9 +229,7 @@ test('TC-19: Verify that duplicate tags on one article are de-duplicated', { tag
   await articlePage.expectTagPillCount(1);
 });
 
-test('TC-20: Verify that a whitespace-only tag is rejected', { tag: ['@regression', '@known-defect'] }, async ({ articlePage }) => {
-  test.fixme(true, 'findings/articles.txt FINDING 12 - a whitespace-only tag is accepted and stored');
-
+test('TC-20: Verify that a whitespace-only tag is rejected', { tag: ['@regression'] }, async ({ articlePage }) => {
   await articlePage.navigateToEditor();
   await articlePage.addTag(ARTICLE_EDGE.whitespaceOnly);
 

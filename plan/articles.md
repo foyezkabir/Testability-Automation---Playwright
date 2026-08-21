@@ -52,8 +52,8 @@ They carry `@known-defect` and are listable with `--grep @known-defect`.
 | TC-16 | `/editor` · populated · publish a unicode + emoji title | `@regression` | `cleanupArticle` (B) | non-ASCII characters survive the round trip unchanged |
 | TC-17 | `/editor` · populated · publish a title containing SQL-like text | `@regression @critical` | `cleanupArticle` (B) | the payload is displayed verbatim, proving it was not executed; the tags endpoint still responds, proving no table was dropped |
 | TC-18 | `/article/:slug` · populated · view an article whose title contains script markup | `@critical` | `cleanupArticle` (B) | no native dialog fires and the markup renders as literal text. This is the render check that RESOLVED FINDING 11 as **not exploitable** |
-| TC-19 | `/editor` · populated · add the same tag twice | `@regression @known-defect` **fixme** | `cleanupArticle` (B) | a repeated tag appears once. **Currently fails: FINDING 12** - both copies are kept |
-| TC-20 | `/editor` · disabled/invalid · press Enter on a whitespace-only tag | `@regression @known-defect` **fixme** | none | no pill is added. **Currently fails: FINDING 12** - a blank tag is accepted |
+| TC-19 | `/editor` · populated · add the same tag twice | `@regression` | `cleanupArticle` (B) | a repeated tag appears once. PASSES - the editor de-duplicates correctly (FINDING 12 was corrected; the original claim came from an API-only probe) |
+| TC-20 | `/editor` · disabled/invalid · press Enter on a whitespace-only tag | `@regression` | none | no pill is added. PASSES - the editor rejects a blank tag (the API does not; see FINDING 12) |
 | TC-21 | `/editor` · populated · add 50 tags | `@regression` | `cleanupArticle` (B) | every tag becomes a pill - the app sets no cap. Documents the current contract; FINDING 12 records that a cap would be preferable |
 
 ### Boundary values used, and where they came from
