@@ -18,7 +18,7 @@ Latest run: **72 passed · 0 skipped · 0 failed.**
 
 ## Quick start
 
-**Clone and run. No credentials to request, no setup step.**
+**Clone and run. There is nothing to configure and no credentials to request.**
 
 ```bash
 npm ci                               # 1. install dependencies
@@ -26,25 +26,40 @@ npx playwright install               # 2. download browser binaries (once per ma
 npm test                             # 3. run the suite
 ```
 
-That is the whole process. On the first run you will see:
+That is the whole process. Three commands, then the tests run.
+
+### You do not need to create a `.env` file
+
+A fresh clone has no `.env`, because that file is gitignored and never committed. **You do
+not have to create one.** The suite creates it for you on the first run.
+
+Before `npm test` even reaches a test, `global-setup.ts` looks for credentials. Finding none,
+it registers a throwaway account against the app's public registration endpoint, writes the
+credentials into a new `.env`, logs in, and stores the session. You will see this line first:
 
 ```
 global-setup: no credentials found, registered a test account (qa…@mailinator.com) and saved it to .env
 ```
+
+From then on `.env` exists, so every later run reuses that same account and never registers
+again. Exactly one account is ever created per clone.
 
 ### What happens on that first run
 
 ```
 npm test
    │
-   ├─ 1. global-setup.ts starts (before any test)
+   ├─ 1. global-setup.ts runs first, before any test
    │      │
-   │      ├─ .env has EMAIL + PASSWORD?
-   │      │     ├─ YES → log in with them, never register
-   │      │     └─ NO  → POST /api/users to register a throwaway account,
-   │      │              then write all five keys into .env
+   │      ├─ are EMAIL and PASSWORD available?
+   │      │     ├─ NO  (no .env file at all, or one with empty values)
+   │      │     │      → POST /api/users to register a throwaway account
+   │      │     │      → create .env and write all five keys into it
+   │      │     │
+   │      │     └─ YES (you supplied your own, or a previous run wrote them)
+   │      │            → use them as-is, never register
    │      │
-   │      ├─ log in via POST /api/users/login → receive a JWT
+   │      ├─ POST /api/users/login → receive a JWT
    │      ├─ plant the JWT in localStorage, load the app once
    │      └─ save the session to .auth/user.json
    │
@@ -55,12 +70,12 @@ npm test
          exercises the UI, and tears its data down afterwards
 ```
 
-Both `.env` and `.auth/` are gitignored. `.env` persists, so run 2 onward reuses the same
-account and never registers again. To start over with a fresh account, clear `EMAIL` and
-`PASSWORD` in `.env` and run again.
+Both `.env` and `.auth/` stay out of git. To start over with a fresh account, delete `.env`
+(or clear `EMAIL` and `PASSWORD` in it) and run again.
 
-To use your own Conduit account instead, put it in `.env` before the first run and
-auto-registration never triggers:
+### Optional: use your own Conduit account
+
+Only if you want to. Create `.env` before the first run and auto-registration never triggers:
 
 ```ini
 BASE_URL=https://conduit.bondaracademy.com
@@ -70,8 +85,11 @@ PASSWORD=<your conduit password>
 USERNAME=<your conduit username>
 ```
 
-> The API is a **separate host** from the UI - it is not `BASE_URL + /api`. Hence the second
-> key. Both fall back to the values above if unset, so a missing `.env` still works.
+`.env.example` is committed as a template with these keys and no values.
+
+> The API is a **separate host** from the UI, not `BASE_URL + /api`, which is why there are
+> two URL keys. Both fall back to the values shown above when unset, so a missing `.env`
+> resolves correctly.
 
 ### Commands
 
