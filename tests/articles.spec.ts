@@ -118,7 +118,7 @@ test('TC-09: Verify that a tag can be removed while composing an article', { tag
 });
 
 // Expected failure - findings/articles.txt FINDING 8 - accepted with 201; the slug collapses to "-64987" and the article has no title
-test.fail('TC-10: Verify that a whitespace-only article is rejected', { tag: ['@regression', '@known-defect'] }, async ({ articlePage }) => {
+test.fail('TC-10: Verify that a whitespace-only article is rejected', { tag: ['@regression', '@known-defect'] }, async ({ articlePage, cleanupSlugLessArticle }) => {
   await articlePage.navigateToEditor();
   await articlePage.createArticle(newArticle({
     title: ARTICLE_EDGE.whitespaceOnly,

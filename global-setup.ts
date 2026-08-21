@@ -1,100 +1,75 @@
 import { chromium, FullConfig, request, APIRequestContext } from '@playwright/test';
 import * as fs from 'fs';
-import 'dotenv/config';
+import { ENV } from './datas/common/EnvironmentData';
 
 /**
- * Session management (requirement 3.2): authenticate ONCE here, save the session to
- * `.auth/user.json`, and let every test start already logged in via `storageState` in
- * playwright.config.ts. No test ever logs in.
+ * Authenticate ONCE, save the session to `.auth/user.json`, and let every test start logged
+ * in via `storageState`. No test performs a login.
  *
- * Zero-setup on a fresh clone: if `.env` has no credentials, this registers a throwaway
- * account first and writes it to `.env`. So `npm ci && npm test` works immediately, with
- * no credentials to request and no setup command to remember. When credentials ARE present
- * (your machine, or CI reading repository secrets) it just logs in with them and never
- * registers anything.
+ * If `.env` has no credentials this registers a throwaway account and writes it there, so a
+ * fresh clone runs with nothing to configure. Workers are separate processes that re-read
+ * `.env`, which is why the credentials must be written to the file rather than just set in
+ * this process.
  *
- * The token is obtained from the API rather than by driving the login form: login is not
- * one of the scenarios under test, and routing every run through the login UI would make
- * all 30 tests fail whenever that one form broke. The signup FLOW is covered as a real
- * test in tests/auth.spec.ts.
+ * The token comes from the API rather than the login form: login is not one of the scenarios
+ * under test, and routing every run through that form would make the whole suite fail
+ * whenever it broke.
  *
- * Conduit keeps its JWT in localStorage (not a cookie - verified against the live app), so
- * the session is planted with addInitScript plus a real page load: storageState serialises
- * localStorage under `origins`, which is what makes it reusable across workers.
+ * Conduit keeps its JWT in localStorage, not a cookie, so the session is planted with
+ * addInitScript plus a real page load - storageState only serialises localStorage under
+ * `origins` once the origin has been visited.
  */
 
-const DEFAULT_UI = 'https://conduit.bondaracademy.com';
-const DEFAULT_API = 'https://conduit-api.bondaracademy.com/api';
 const ENV_PATH = '.env';
 
-type Credentials = { username: string; email: string; password: string };
+type Credentials = { email: string; password: string };
 
-/**
- * Build a throwaway account. The password is DERIVED from the same random suffix rather
- * than being a fixed literal, so no credential is written into source and each generated
- * account gets its own. It is persisted to .env (gitignored) for reuse on later runs.
- */
-function buildCredentials(): Credentials {
-  const suffix = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
-  return {
-    username: `qa${suffix}`,
-    email: `qa${suffix}@mailinator.com`,
-    password: `Qa!${suffix.toUpperCase()}${suffix.length}`,
-  };
-}
-
-/** Replace a key's value in .env text, appending the key when it is not present. */
 function setEnvValue(contents: string, key: string, value: string): string {
   const line = `${key}=${value}`;
   const pattern = new RegExp(`^${key}=.*$`, 'm');
   return pattern.test(contents) ? contents.replace(pattern, line) : `${contents.trimEnd()}\n${line}\n`;
 }
 
-/** Persist the generated account so later runs reuse it instead of registering again. */
-function persistCredentials(credentials: Credentials, baseURL: string, apiBaseURL: string): void {
-  const existing = fs.existsSync(ENV_PATH) ? fs.readFileSync(ENV_PATH, 'utf8') : '';
-  let contents = setEnvValue(existing, 'BASE_URL', baseURL);
-  contents = setEnvValue(contents, 'API_BASE_URL', apiBaseURL);
-  contents = setEnvValue(contents, 'EMAIL', credentials.email);
-  contents = setEnvValue(contents, 'PASSWORD', credentials.password);
-  contents = setEnvValue(contents, 'USERNAME', credentials.username);
-  fs.writeFileSync(ENV_PATH, contents);
-}
-
+/** Register a throwaway account and persist it to .env. Password derives from the same
+ *  random suffix as the username, so no credential is written into source. */
 async function registerAccount(api: APIRequestContext, baseURL: string, apiBaseURL: string): Promise<Credentials> {
-  const credentials = buildCredentials();
-  const response = await api.post('users', { data: { user: credentials }, maxRetries: 3 });
+  const suffix = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+  const user = {
+    username: `qa${suffix}`,
+    email: `qa${suffix}@mailinator.com`,
+    password: `Qa!${suffix.toUpperCase()}${suffix.length}`,
+  };
+
+  const response = await api.post('users', { data: { user }, maxRetries: 3 });
 
   if (!response.ok()) {
-    throw new Error(
-      `global-setup: could not register a test account (${response.status()}): ${await response.text()}`,
-    );
+    throw new Error(`global-setup: could not register a test account (${response.status()}): ${await response.text()}`);
   }
 
-  persistCredentials(credentials, baseURL, apiBaseURL);
-  process.env.EMAIL = credentials.email;
-  process.env.PASSWORD = credentials.password;
-  process.env.USERNAME = credentials.username;
+  let contents = fs.existsSync(ENV_PATH) ? fs.readFileSync(ENV_PATH, 'utf8') : '';
+  contents = setEnvValue(contents, 'BASE_URL', baseURL);
+  contents = setEnvValue(contents, 'API_BASE_URL', apiBaseURL);
+  contents = setEnvValue(contents, 'EMAIL', user.email);
+  contents = setEnvValue(contents, 'PASSWORD', user.password);
+  contents = setEnvValue(contents, 'USERNAME', user.username);
+  fs.writeFileSync(ENV_PATH, contents);
 
-  console.log(`global-setup: no credentials found, registered a test account (${credentials.email}) and saved it to .env`);
-  return credentials;
+  console.log(`global-setup: no credentials found, registered a test account (${user.email}) and saved it to .env`);
+  return { email: user.email, password: user.password };
 }
 
 async function globalSetup(_config: FullConfig) {
-  const baseURL = process.env.BASE_URL || DEFAULT_UI;
-  const apiBaseURL = process.env.API_BASE_URL || DEFAULT_API;
+  const { baseUrl: baseURL, apiBaseUrl: apiBaseURL } = ENV;
 
-  // Trailing slash matters: a base of `…/api` plus a leading-slash path resolves to the
-  // host root and silently drops the `/api` segment.
+  // Trailing slash matters: `…/api` plus a leading-slash path drops the `/api` segment.
   const api = await request.newContext({ baseURL: `${apiBaseURL.replace(/\/+$/, '')}/` });
 
-  const hasCredentials = Boolean(process.env.EMAIL && process.env.PASSWORD);
-  const credentials = hasCredentials
-    ? { email: process.env.EMAIL!, password: process.env.PASSWORD! }
+  const credentials: Credentials = process.env.EMAIL && process.env.PASSWORD
+    ? { email: process.env.EMAIL, password: process.env.PASSWORD }
     : await registerAccount(api, baseURL, apiBaseURL);
 
   const response = await api.post('users/login', {
-    data: { user: { email: credentials.email, password: credentials.password } },
+    data: { user: credentials },
     maxRetries: 3,
   });
 
@@ -104,9 +79,8 @@ async function globalSetup(_config: FullConfig) {
       [
         `global-setup: login failed (${response.status()}): ${await response.text()}`,
         '',
-        'The credentials in .env did not work. To start over with a fresh account,',
-        'clear EMAIL and PASSWORD in .env and run the tests again - one will be',
-        'registered automatically.',
+        'The credentials in .env did not work. To start over with a fresh account, clear',
+        'EMAIL and PASSWORD in .env and run the tests again - one will be registered.',
       ].join('\n'),
     );
   }

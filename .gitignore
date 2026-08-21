@@ -11,6 +11,8 @@ test-results/
 playwright-report/
 smart-report.html
 test-history.json
+results.json
+traces/
 failures/
 
 # baselines are text-only; never images

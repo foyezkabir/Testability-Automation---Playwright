@@ -13,6 +13,7 @@ export const test = base.extend<{
   userAsserts: UserAsserts;
   seededArticle: SeededArticle;
   cleanupArticle: (title: string) => void;
+  cleanupSlugLessArticle: void;
   restoredProfile: void;
 }>({
   api: async ({}, use) => {
@@ -41,25 +42,23 @@ export const test = base.extend<{
     const article = newArticle();
     const seeded = await articles.create(article);
     await use(seeded);
-    // TC-03 renames this article, which also changes its slug, so the seeded slug alone is
-    // not enough. Match on the random suffix of BOTH the original title and whatever the
-    // test renamed it to - the same mechanism cleanupArticle uses, and parallel-safe.
+    // TC-03 renames the article, which changes its slug, so the seeded slug is not enough.
     await articles.removeMany([seeded.slug]);
     await articles.removeByTitlePrefix([article.title], seeded.author.username);
   },
 
+  // A whitespace-only title slugifies to nothing (FINDING 8), leaving no title text for
+  // cleanupArticle to match. Without this the residue blocks the next run: the duplicate
+  // blank slug is rejected with 422, so the test would fail for the wrong reason.
+  cleanupSlugLessArticle: async ({ articles }, use) => {
+    await use();
+    await articles.removeSlugLess(ACCOUNT.username);
+  },
+
+  // Matches on the title's random suffix. Exact-title lookup missed (the app does not store
+  // titles verbatim) and leaked 45 articles; a before/after slug diff fixed that but deleted
+  // other workers' articles mid-run.
   cleanupArticle: async ({ articles }, use) => {
-    // Delete by SLUG PREFIX, derived from the title the spec registers.
-    //
-    // Two earlier approaches failed. Exact title lookup missed, because the app does not
-    // always store the title verbatim - that leaked 45 articles which then polluted the
-    // feed the tests read from. Diffing all owned slugs before/after fixed the leak but is
-    // not parallel-safe: a worker's "after" snapshot contains articles another worker is
-    // still using, so it deleted them mid-test.
-    //
-    // The slug is `<slugified-title>-<userId>`, and every factory title carries a random
-    // suffix, so a prefix match is both unique to this test and immune to how the app
-    // normalises the title.
     const titles: string[] = [];
     await use((title: string) => {
       titles.push(title);
@@ -70,7 +69,6 @@ export const test = base.extend<{
   restoredProfile: async ({ users }, use) => {
     const snapshot = await users.getProfile();
     await use();
-    // Always restores, including on failure - every test shares one account.
     await users.restoreProfile(snapshot);
   },
 });

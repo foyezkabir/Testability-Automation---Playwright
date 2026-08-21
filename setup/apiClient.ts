@@ -1,14 +1,20 @@
 import { request, APIRequestContext } from '@playwright/test';
-import 'dotenv/config';
+import { ENV } from '../datas/common/EnvironmentData';
+import { ACCOUNT } from '../datas/common/AccountData';
 
-
-const API_BASE_URL = `${(process.env.API_BASE_URL ?? 'https://conduit-api.bondaracademy.com/api').replace(/\/+$/, '')}/`;
+const API_BASE_URL = `${ENV.apiBaseUrl.replace(/\/+$/, '')}/`;
 
 async function getAuthToken(): Promise<string> {
   const context = await request.newContext({ baseURL: API_BASE_URL });
   const response = await context.post('users/login', {
-    data: { user: { email: process.env.EMAIL, password: process.env.PASSWORD } },
+    data: { user: { email: ACCOUNT.email, password: ACCOUNT.password } },
   });
+  if (!response.ok()) {
+    const detail = await response.text();
+    await context.dispose();
+    throw new Error(`apiClient: login failed (${response.status()}): ${detail}`);
+  }
+
   const body = await response.json();
   await context.dispose();
   return body.user.token;

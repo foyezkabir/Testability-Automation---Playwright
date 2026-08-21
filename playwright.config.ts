@@ -1,89 +1,68 @@
-import 'dotenv/config';
 import * as path from 'path';
 import { defineConfig, devices } from '@playwright/test';
+import { ENV } from './datas/common/EnvironmentData';
 
 /**
- * LOCAL runs are deliberately slow and watchable: one worker, one browser (chromium),
- * headed. That makes a run easy to follow and to debug, which is what you want when you
- * are reading the suite for the first time.
+ * Local runs are slow and watchable - one worker, headed Chromium - so a run is easy to
+ * follow. CI runs headless, fully parallel, across all three browsers.
  *
- * CI runs are the opposite: headless, fully parallel, all three browsers. That is what
- * satisfies the cross-browser and parallel-execution requirements, and the Actions tab is
- * the evidence.
- *
- * Every one of these is overridable from the CLI without editing this file:
- *   npx playwright test --workers=4              parallel locally
- *   npx playwright test --project=firefox        a different browser
- *   npx playwright test --headed                 force headed
- *   CI=1 npx playwright test                     reproduce the CI profile locally
+ * Override any of it per run without editing this file:
+ *   npx playwright test --workers=4         parallel locally
+ *   npx playwright test --project=firefox   a different browser
+ *   CI=1 npx playwright test                the CI profile
  */
 const isCI = !!process.env.CI;
+
+const CHROMIUM = { name: 'chromium', use: { ...devices['Desktop Chrome'] } };
+
+// WebKit and Firefox skip settings.spec.ts: Conduit gives an account ONE mutable profile,
+// so running that file in three browsers at once measures contention over a shared fixture
+// rather than browser compatibility. Every other spec is data-isolated.
+const CROSS_BROWSER = [
+  CHROMIUM,
+  { name: 'webkit', use: { ...devices['Desktop Safari'] }, testIgnore: /settings\.spec\.ts/ },
+  { name: 'firefox', use: { ...devices['Desktop Firefox'] }, testIgnore: /settings\.spec\.ts/ },
+];
 
 export default defineConfig({
   testDir: './tests',
   globalSetup: require.resolve('./global-setup'),
+  projects: isCI ? CROSS_BROWSER : [CHROMIUM],
 
-  // Parallel in CI (requirement 4.6). Locally the run is serial so it is followable.
+  // Execution
   fullyParallel: isCI,
   workers: isCI ? undefined : 1,
-
   forbidOnly: isCI,
 
-  // The app under test is a shared public demo instance that intermittently stalls or
-  // briefly drops requests - observed hanging for minutes and then recovering, with no
-  // change on our side. Retrying locally as well as in CI is what keeps a transient
-  // outage from being reported as a product failure (requirement 3.4, resilient tests).
+  // The app under test is a shared public demo that intermittently stalls for minutes and
+  // then recovers. Retries and a wider timeout stop a transient outage being reported as a
+  // product failure. 'isolated' runs retries at the end, one at a time, so a retry cannot
+  // be polluted by a neighbour still running.
   retries: isCI ? 2 : 1,
-
-  // A slightly wider per-test budget for the same reason: the default 30s is comfortable
-  // when the demo app is healthy but too tight when it is briefly degraded. Kept at 60s
-  // rather than higher - beyond that a hang should fail fast and be retried, not waited on.
+  retryStrategy: 'isolated',
   timeout: 60_000,
   expect: { timeout: 15_000 },
 
-  retryStrategy: 'isolated', // PW >=1.62: retries run at the END, one at a time in a
-                             // single worker - a retry can't be polluted by a neighbour
-                             // still running. Default 'immediate' retries in place.
-
   reporter: [
     ['list'],
-    // The reporter resolves a relative outputFile against testDir, which drops the
-    // report into tests/ where .gitignore does not match it. Anchor it to the
-    // project root so it lands beside package.json and stays ignored.
+    // Anchored to __dirname: the reporter resolves a relative path against testDir, which
+    // would drop the report into tests/ where .gitignore does not match it.
     ['playwright-smart-reporter', { outputFile: path.join(__dirname, 'smart-report.html') }],
+    // Machine-readable counts for the CI summary table. Only in CI, so a local run leaves
+    // no stray file. The path comes from PLAYWRIGHT_JSON_OUTPUT_NAME, set by the workflow.
+    ...(isCI ? [['json'] as [string]] : []),
   ],
 
   use: {
-    baseURL: process.env.BASE_URL,
-
-    // Headed locally so the run can be watched; headless in CI, which has no display.
+    baseURL: ENV.baseUrl,
     headless: isCI,
 
-    // Phase 1 runs before any session file exists. There is no CLI flag to drop
-    // storageState, so it is a config switch: SMOKE_NO_AUTH=1 npx playwright test.
-    // Normal runs are unaffected and still load .auth/user.json.
+    // SMOKE_NO_AUTH exists because there is no CLI flag to drop storageState, and the very
+    // first run has no session file yet.
     ...(process.env.SMOKE_NO_AUTH ? {} : { storageState: '.auth/user.json' }),
 
     trace: 'retain-on-failure',
     video: 'retain-on-failure',
     screenshot: 'only-on-failure',
   },
-
-  // Locally only chromium runs, so `npm test` is one browser end to end. CI adds webkit
-  // and firefox, which is where cross-browser coverage (requirement 4.5) is demonstrated.
-  // Either way `--project=<name>` selects one explicitly.
-  projects: isCI
-    ? [
-        // Chromium runs everything, including the profile tests.
-        { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
-
-        // WebKit and Firefox skip settings.spec.ts. Conduit gives an account ONE mutable
-        // profile, and that file is the only one that writes to it - running it in three
-        // browsers at once means three sessions overwriting each other's data and each
-        // other's restore. That measures contention over a shared fixture, not browser
-        // compatibility. Every other spec is data-isolated and does run on all three.
-        { name: 'webkit', use: { ...devices['Desktop Safari'] }, testIgnore: /settings\.spec\.ts/ },
-        { name: 'firefox', use: { ...devices['Desktop Firefox'] }, testIgnore: /settings\.spec\.ts/ },
-      ]
-    : [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
 });

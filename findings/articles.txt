@@ -221,6 +221,15 @@ Expected result:
   title, so trimming before validation is the missing step.
 Confidence: high - reproduced twice, existence confirmed by a follow-up GET.
 
+Consequence for the suite: TC-10 asserts the correct behaviour and is therefore an
+expected failure - the app DOES create the article. Because a whitespace title
+slugifies to nothing, the residue has no title text for the normal
+title-matching teardown to find, so it survived and blocked the next run: the
+second attempt hit the slug collision above and returned 422, making TC-10 fail
+for the wrong reason. A dedicated `cleanupSlugLessArticle` fixture now removes any
+article whose slug is only the user-id suffix. Verified over two consecutive full
+runs with zero residue.
+
 Note on the existing suite: TC-02 covers the fully EMPTY form and passes, because
 the app does reject "". This whitespace variant slipped through precisely because
 "empty" and "whitespace-only" are different inputs.

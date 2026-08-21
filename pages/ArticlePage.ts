@@ -133,31 +133,10 @@ export class ArticlePage {
     await this.locators.deleteArticleButton.click();
   }
 
-  async clickEditArticleLink(): Promise<void> {
-    await this.locators.editArticleLink.click();
-  }
-
-  async addComment(text: string): Promise<void> {
-    await this.locators.commentInput.fill(text);
-    await this.locators.postCommentButton.click();
-  }
-
   // ===== HOME FEED =====
 
   async filterByTag(tag: string): Promise<void> {
     await this.locators.sidebarTag(tag).click();
-  }
-
-  async selectFeedTab(name: string): Promise<void> {
-    await this.locators.feedTab(name).click();
-  }
-
-  async openArticleByTitle(title: string): Promise<void> {
-    await this.locators.articleTitle(title).click();
-  }
-
-  async goToPage(pageNumber: string): Promise<void> {
-    await this.locators.paginationPage(pageNumber).click();
   }
 
   // ===== STATE READERS =====
@@ -186,14 +165,6 @@ export class ArticlePage {
 
   async expectStillOnEditor(): Promise<void> {
     await expect.poll(() => this.currentPath()).toBe('/editor');
-  }
-
-  async expectStillOnEditorForArticle(): Promise<void> {
-    await expect.poll(() => this.currentPath()).toContain('/editor');
-  }
-
-  async expectEditorLoadedWithTitle(title: string): Promise<void> {
-    await expect(this.locators.titleInput).toHaveValue(title);
   }
 
   // ===== ASSERTIONS - validation errors =====

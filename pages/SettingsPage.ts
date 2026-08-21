@@ -36,18 +36,10 @@ export class SettingsPage {
     await this.locators.imageInput.fill(url);
   }
 
-  async clearUsername(): Promise<void> {
-    await this.locators.usernameInput.clear();
-  }
-
   // ===== ACTIONS =====
 
   async clickUpdateSettingsButton(): Promise<void> {
     await this.locators.updateSettingsButton.click();
-  }
-
-  async clickLogoutButton(): Promise<void> {
-    await this.locators.logoutButton.click();
   }
 
   async updateProfile(username: string, update: ProfileUpdate): Promise<void> {
