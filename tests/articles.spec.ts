@@ -1,5 +1,5 @@
 import { test, expect } from '../fixtures/base';
-import { newArticle, uniqueTag, ARTICLE_EDGE } from '../datas/articles/ArticleData';
+import { newArticle, uniqueSuffix, uniqueTag, ARTICLE_EDGE } from '../datas/articles/ArticleData';
 import { ACCOUNT } from '../datas/common/AccountData';
 
 test('TC-01: Verify that a new article is created and published', { tag: ['@smoke', '@critical'] }, async ({ articlePage, articleAsserts, cleanupArticle }) => {
@@ -173,7 +173,7 @@ test('TC-14: Verify that a duplicate article title is rejected', { tag: ['@regre
 });
 
 test('TC-15: Verify that a single-character title is accepted', { tag: ['@regression'] }, async ({ articlePage, cleanupArticle }) => {
-  const article = newArticle({ title: `${ARTICLE_EDGE.singleCharTitle}${Date.now().toString(36)}` });
+  const article = newArticle({ title: `${ARTICLE_EDGE.singleCharTitle}${uniqueSuffix()}` });
   cleanupArticle(article.title);
 
   await articlePage.navigateToEditor();
@@ -183,7 +183,7 @@ test('TC-15: Verify that a single-character title is accepted', { tag: ['@regres
 });
 
 test('TC-16: Verify that a unicode and emoji title is stored without mangling', { tag: ['@regression'] }, async ({ articlePage, cleanupArticle }) => {
-  const article = newArticle({ title: `${ARTICLE_EDGE.unicodeTitle} ${Date.now().toString(36)}` });
+  const article = newArticle({ title: `${ARTICLE_EDGE.unicodeTitle} ${uniqueSuffix()}` });
   cleanupArticle(article.title);
 
   await articlePage.navigateToEditor();
@@ -193,7 +193,7 @@ test('TC-16: Verify that a unicode and emoji title is stored without mangling', 
 });
 
 test('TC-17: Verify that SQL-like text in a title is treated as literal text', { tag: ['@regression', '@critical'] }, async ({ articlePage, articleAsserts, cleanupArticle }) => {
-  const article = newArticle({ title: `${ARTICLE_EDGE.sqlishTitle} ${Date.now().toString(36)}` });
+  const article = newArticle({ title: `${ARTICLE_EDGE.sqlishTitle} ${uniqueSuffix()}` });
   cleanupArticle(article.title);
 
   await articlePage.navigateToEditor();
@@ -204,7 +204,7 @@ test('TC-17: Verify that SQL-like text in a title is treated as literal text', {
 });
 
 test('TC-18: Verify that markup in a title is not executed when the article is viewed', { tag: ['@critical'] }, async ({ articlePage, cleanupArticle }) => {
-  const article = newArticle({ title: `${ARTICLE_EDGE.scriptTitle} ${Date.now().toString(36)}` });
+  const article = newArticle({ title: `${ARTICLE_EDGE.scriptTitle} ${uniqueSuffix()}` });
   cleanupArticle(article.title);
 
   articlePage.watchForDialogs();

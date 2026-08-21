@@ -27,6 +27,13 @@ export const newArticle = (overrides: Partial<NewArticle> = {}): NewArticle => (
 export const uniqueTag = (): string => `qa${faker.string.alphanumeric(8).toLowerCase()}`;
 
 /**
+ * A unique suffix for tests that build a title around a fixed payload. Random rather than a
+ * timestamp: Date.now() repeats inside the same millisecond, and the slug derives from the
+ * title, so two runs could collide on one record.
+ */
+export const uniqueSuffix = (): string => faker.string.alphanumeric(8).toLowerCase();
+
+/**
  * Boundary inputs, measured not guessed: a binary search found 186 characters rejected with
  * an HTTP 500 as the derived slug overflows its DB column (findings/articles.txt FINDING 9).
  */
