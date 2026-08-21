@@ -21,9 +21,10 @@ test.describe('Profile settings', () => {
     await userAsserts.expectStoredBio(update.bio);
     await userAsserts.expectStoredImage(update.image);
 
-    await settingsPage.navigateToSettings();
+    await settingsPage.returnToSettingsViaHome(); // navigate back the way a user would, from the page the save landed on
     await settingsPage.expectSettingsFormIsOpen();
     await userAsserts.expectStoredBio(update.bio);
+    await userAsserts.expectStoredImage(update.image);
   });
 
   test('TC-02: Verify that clearing the username does not change the stored username', { tag: ['@regression'] }, async ({ settingsPage, userAsserts, restoredProfile }) => {
@@ -62,7 +63,7 @@ test.describe('Profile settings', () => {
     await settingsPage.updateProfile(ACCOUNT.username, update);
     await settingsPage.expectRedirectedToProfile();
 
-    await settingsPage.navigateToSettings();
+    await settingsPage.returnToSettingsViaHome(); // navigate back the way a user would, from the page the save landed on
 
     await settingsPage.expectFormShowsStoredValues(ACCOUNT.username, update);
   });

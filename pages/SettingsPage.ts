@@ -22,6 +22,20 @@ export class SettingsPage {
     await this.page.goto('/settings');
   }
 
+  /**
+   * Return to Settings by clicking Home then Settings, as a user would.
+   *
+   * The reload is a workaround for findings/settings.txt FINDING 8: after a save the profile
+   * page renders with no authenticated navbar at all, so there is nothing to click until the
+   * page is reloaded. Both navigations after that are real clicks.
+   */
+  async returnToSettingsViaHome(): Promise<void> {
+    await this.page.reload();
+
+    await this.locators.homeNavLink.click();
+    await this.locators.settingsNavLink.click();
+  }
+
   // ===== FILL FIELDS =====
 
   async fillUsername(username: string): Promise<void> {

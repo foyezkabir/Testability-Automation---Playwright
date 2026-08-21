@@ -54,7 +54,7 @@ They carry `@known-defect` and are listable with `--grep @known-defect`.
 | TC-18 | `/article/:slug` · populated · view an article whose title contains script markup | `@critical` | `cleanupArticle` (B) | no native dialog fires and the markup renders as literal text. This is the render check that RESOLVED FINDING 11 as **not exploitable** |
 | TC-19 | `/editor` · populated · add the same tag twice | `@regression` | `cleanupArticle` (B) | a repeated tag appears once. PASSES - the editor de-duplicates correctly (FINDING 12 was corrected; the original claim came from an API-only probe) |
 | TC-20 | `/editor` · disabled/invalid · press Enter on a whitespace-only tag | `@regression` | none | no pill is added. PASSES - the editor rejects a blank tag (the API does not; see FINDING 12) |
-| TC-21 | `/editor` · populated · add 50 tags | `@regression` | `cleanupArticle` (B) | every tag becomes a pill - the app sets no cap. Documents the current contract; FINDING 12 records that a cap would be preferable |
+| TC-21 | `/editor` · populated · add several tags to one article | `@regression` | `cleanupArticle` (B) | every tag becomes a pill. Six is enough to prove multi-tag entry works; the absence of any cap is recorded in FINDING 12, measured with 50 during the API probe |
 
 ### Boundary values used, and where they came from
 

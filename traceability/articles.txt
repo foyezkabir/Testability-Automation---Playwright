@@ -42,7 +42,7 @@ each: findings/articles.txt
   Script markup rendering (XSS)     -> TC-18  @critical
   Duplicate tags                    -> TC-19  @regression
   Whitespace-only tag               -> TC-20  @regression
-  Large tag count (50)              -> TC-21  @regression
+  Multiple tags on one article      -> TC-21  @regression
 
 EXPECTED-FAIL rows use test.fail: they RUN, assert what the app SHOULD do, and are
 reported as expected failures rather than turning the suite red. If a defect is

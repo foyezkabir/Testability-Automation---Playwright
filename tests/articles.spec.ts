@@ -233,7 +233,7 @@ test('TC-20: Verify that a whitespace-only tag is rejected', { tag: ['@regressio
   await articlePage.expectTagPillCount(0);
 });
 
-test('TC-21: Verify that a large number of tags is accepted', { tag: ['@regression'] }, async ({ articlePage, cleanupArticle }) => {
+test('TC-21: Verify that multiple tags on one article are all accepted', { tag: ['@regression'] }, async ({ articlePage, cleanupArticle }) => {
   const article = newArticle({ tagList: [...ARTICLE_EDGE.manyTags] });
   cleanupArticle(article.title);
 

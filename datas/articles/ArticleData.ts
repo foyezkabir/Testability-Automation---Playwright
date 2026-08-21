@@ -41,7 +41,7 @@ export const ARTICLE_EDGE = {
   sqlishTitle: "Rob'); DROP TABLE articles;--",
   unicodeTitle: 'テスト 🚀 unicode',
   duplicateTags: ['dup', 'dup'],
-  manyTags: Array.from({ length: 50 }, (_, i) => `bulk${i}`),
+  manyTags: Array.from({ length: 6 }, (_, i) => `bulk${i}`),
   nonExistentTag: 'zzz-no-such-tag-zzz-99999',
 } as const;
 

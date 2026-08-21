@@ -249,6 +249,56 @@ NOT YET PROBED - known gaps, listed so they are not mistaken for "tested and fin
   - concurrent profile updates from two sessions
 
 ================================================================================
+FINDING 8   [SEVERITY: medium]
+================================================================================
+Title: Settings: saving drops the authenticated navigation bar, leaving the user on
+       a page with no way to navigate anywhere
+Type: functional / UI
+Module: settings
+
+Description:
+  A successful Update Settings redirects to /profile/<username>. On arrival the
+  navbar renders only the "conduit" brand - Home, New Article, Settings and the
+  username link are all gone. The user has just saved their profile and is left on
+  a page with no navigation at all; the only ways out are the browser back button
+  or editing the URL.
+  The session is NOT lost: the JWT is still in localStorage and the nav returns in
+  full after a manual page reload. So this is a client-side render bug, not an
+  auth failure.
+
+Steps to reproduce:
+  1. Log in and go to /settings.
+  2. Change the bio and click "Update Settings".
+  3. The app redirects to /profile/<username>. Read the navbar.
+  4. Reload the page and read the navbar again.
+
+Evidence:
+  Arriving at /profile/<user> BY SAVING SETTINGS:
+    navbar text  = "conduit"
+    all links    = ["conduit", " Edit Profile Settings", "My Posts",
+                    "Favorited Posts", "conduit", "RealWorld OSS Project",
+                    "Bondar Academy"]
+    jwtToken in localStorage = present
+
+  Visiting /profile/<user> DIRECTLY (no preceding save):
+    navbar text  = "conduit | Home |  New Article |  Settings | <username>"
+
+  The SAME page after a manual reload following the save:
+    navbar text  = "conduit | Home |  New Article |  Settings | <username>"
+
+Actual result: the authenticated nav is missing until the page is reloaded.
+Expected result: the navbar should render its authenticated state on arrival, as it
+  does on a direct visit - the user is still logged in.
+Confidence: high - reproduced in three variants (after save, direct visit, and
+  reload after save), with the token confirmed present each time.
+
+Consequence for the suite: TC-01 was going to return to Settings by clicking Home
+  and then Settings in the navbar, which is what a user would do. That is not
+  possible on this page, so the test reloads first to restore the nav and then
+  navigates by clicking. The reload is a workaround for this defect, not a step a
+  user should need.
+
+================================================================================
 CROSS-CUTTING NOTE - no error feedback anywhere on this surface
 ================================================================================
 Across three separate failure probes (empty username, malformed email, duplicate
