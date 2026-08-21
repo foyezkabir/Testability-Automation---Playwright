@@ -36,9 +36,8 @@ test.describe('Profile settings', () => {
     await userAsserts.expectStoredUsername(ACCOUNT.username);
   });
 
-  test('TC-04: Verify that a whitespace-only username is rejected with a visible error', { tag: ['@regression', '@known-defect'] }, async ({ settingsPage, restoredProfile }) => {
-    test.fail(true, 'findings/settings.txt FINDING 6 - returns HTTP 500 leaking the DB constraint name, and the UI shows nothing');
-
+  // Expected failure - findings/settings.txt FINDING 6 - returns HTTP 500 leaking the DB constraint name, and the UI shows nothing
+  test.fail('TC-04: Verify that a whitespace-only username is rejected with a visible error', { tag: ['@regression', '@known-defect'] }, async ({ settingsPage, restoredProfile }) => {
     await settingsPage.navigateToSettings();
     await settingsPage.submitWithUsername(SETTINGS_EDGE.whitespaceUsername);
 
@@ -46,9 +45,8 @@ test.describe('Profile settings', () => {
     await settingsPage.expectStillOnSettings();
   });
 
-  test('TC-05: Verify that an invalid profile picture URL is rejected', { tag: ['@regression', '@known-defect'] }, async ({ settingsPage, userAsserts, restoredProfile }) => {
-    test.fail(true, 'findings/settings.txt FINDING 7 - any string is accepted and used as the avatar source, leaving a broken image');
-
+  // Expected failure - findings/settings.txt FINDING 7 - any string is accepted and used as the avatar source, leaving a broken image
+  test.fail('TC-05: Verify that an invalid profile picture URL is rejected', { tag: ['@regression', '@known-defect'] }, async ({ settingsPage, userAsserts, restoredProfile }) => {
     await settingsPage.navigateToSettings();
     await settingsPage.submitWithProfileImage(ACCOUNT.username, SETTINGS_EDGE.invalidImageUrl);
 
@@ -56,9 +54,8 @@ test.describe('Profile settings', () => {
     await userAsserts.expectImageNotStored(SETTINGS_EDGE.invalidImageUrl);
   });
 
-  test('TC-06: Verify that the settings form is repopulated with the stored values on return', { tag: ['@regression', '@known-defect'] }, async ({ settingsPage, restoredProfile }) => {
-    test.fail(true, 'findings/settings.txt FINDING 2 - the form always renders blank, so a user cannot see or safely edit their own data');
-
+  // Expected failure - findings/settings.txt FINDING 2 - the form always renders blank, so a user cannot see or safely edit their own data
+  test.fail('TC-06: Verify that the settings form is repopulated with the stored values on return', { tag: ['@regression', '@known-defect'] }, async ({ settingsPage, restoredProfile }) => {
     const update = profileUpdate();
 
     await settingsPage.navigateToSettings();

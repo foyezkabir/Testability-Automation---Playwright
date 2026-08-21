@@ -117,9 +117,8 @@ test('TC-09: Verify that a tag can be removed while composing an article', { tag
   await articlePage.expectTagPillShown(keptTag);
 });
 
-test('TC-10: Verify that a whitespace-only article is rejected', { tag: ['@regression', '@known-defect'] }, async ({ articlePage }) => {
-  test.fail(true, 'findings/articles.txt FINDING 8 - accepted with 201; the slug collapses to "-64987" and the article has no title');
-
+// Expected failure - findings/articles.txt FINDING 8 - accepted with 201; the slug collapses to "-64987" and the article has no title
+test.fail('TC-10: Verify that a whitespace-only article is rejected', { tag: ['@regression', '@known-defect'] }, async ({ articlePage }) => {
   await articlePage.navigateToEditor();
   await articlePage.createArticle(newArticle({
     title: ARTICLE_EDGE.whitespaceOnly,
@@ -132,9 +131,8 @@ test('TC-10: Verify that a whitespace-only article is rejected', { tag: ['@regre
   await articlePage.expectStillOnEditor();
 });
 
-test('TC-11: Verify that a whitespace-only description and body are rejected', { tag: ['@regression', '@known-defect'] }, async ({ articlePage, cleanupArticle }) => {
-  test.fail(true, 'findings/articles.txt FINDING 10 - whitespace-only description and body are accepted as valid content');
-
+// Expected failure - findings/articles.txt FINDING 10 - whitespace-only description and body are accepted as valid content
+test.fail('TC-11: Verify that a whitespace-only description and body are rejected', { tag: ['@regression', '@known-defect'] }, async ({ articlePage, cleanupArticle }) => {
   const article = newArticle({ description: ARTICLE_EDGE.whitespaceOnly, body: ARTICLE_EDGE.whitespaceOnly });
   cleanupArticle(article.title);
 
@@ -144,9 +142,8 @@ test('TC-11: Verify that a whitespace-only description and body are rejected', {
   await articlePage.expectSingleValidationError();
 });
 
-test('TC-12: Verify that an over-long article title is rejected without a server error', { tag: ['@regression', '@known-defect'] }, async ({ articlePage }) => {
-  test.fail(true, 'findings/articles.txt FINDING 9 - a 186-char title returns HTTP 500 and leaks the DB column name instead of a 422');
-
+// Expected failure - findings/articles.txt FINDING 9 - a 186-char title returns HTTP 500 and leaks the DB column name instead of a 422
+test.fail('TC-12: Verify that an over-long article title is rejected without a server error', { tag: ['@regression', '@known-defect'] }, async ({ articlePage }) => {
   await articlePage.navigateToEditor();
   await articlePage.createArticle(newArticle({ title: ARTICLE_EDGE.overLimitTitle }));
 
