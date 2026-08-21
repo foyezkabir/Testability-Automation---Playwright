@@ -44,12 +44,16 @@ export const ARTICLE_EXPECTED = {
  * Edge / boundary inputs for the negative cases.
  *
  * The title-length values come from a measured boundary, not a guess: a binary search
- * against the live API found 185 characters accepted and 186 rejected with an HTTP 500
- * (the derived slug overflows its DB column). See findings/articles-edge-cases.txt.
+ * against the live API found 186 characters rejected with an HTTP 500, because the derived
+ * slug overflows its DB column. See findings/articles.txt FINDING 9.
  */
 export const ARTICLE_EDGE = {
   whitespaceOnly: '   ',
-  maxAcceptedTitle: 'T'.repeat(185),
+  // 170, not the measured 185: the slug is `<title>-<userId>`, so the safe title length
+  // depends on how many digits the account's id has. 185 passed for one account and
+  // overflowed the slug column for another with a longer id. 170 clears the limit for any
+  // account while still exercising a long title.
+  maxAcceptedTitle: 'T'.repeat(170),
   overLimitTitle: 'T'.repeat(186),
   longTitle: 'T'.repeat(300),
   singleCharTitle: 'X',
