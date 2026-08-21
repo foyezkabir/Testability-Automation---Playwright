@@ -1,5 +1,5 @@
 Traceability - articles module                              generated 2026-08-20
-Source of requirements: Testability assignment brief (ASSIGNMENT.txt), not a Jira
+Source of requirements: the Testability assignment brief itself, not a Jira
 ticket - so the left column is the brief's own requirement, not an AC id.
 
 REQUIRED SCENARIOS (brief section 2 - one POSITIVE test case each)
