@@ -8,34 +8,36 @@ on:
   workflow_dispatch:
 
 jobs:
-  verify:
-    name: Lint & typecheck
+  # ── 1. Setup ─────────────────────────────────────────────────────────────────
+  setup:
+    name: 1 · Setup & static checks
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Check out the repository
+      - name: Set Up · check out the repository
         uses: actions/checkout@v5
 
-      - name: Set up Node.js 22
+      - name: Set Up · initialise Node.js 22
         uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
 
-      - name: Install dependencies
+      - name: Install Dependencies · npm ci
         run: npm ci
 
-      - name: Typecheck (tsc --noEmit)
+      - name: Configure Environment · verify the four tiers resolve
         run: npm run typecheck
 
-      - name: Lint (custom QA ruleset)
+      - name: Configure Environment · enforce the QA lint ruleset
         run: npm run lint
 
+  # ── 2-6. Test per browser ────────────────────────────────────────────────────
   test:
-    name: E2E (${{ matrix.project }})
+    name: 2 · E2E (${{ matrix.project }})
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    needs: verify
+    needs: setup
     strategy:
       # Never cancel the other browsers because one failed - the point is the full
       # cross-browser picture in a single run.
@@ -43,47 +45,64 @@ jobs:
       matrix:
         project: [chromium, firefox, webkit]
     steps:
-      - name: Check out the repository
+      - name: Set Up · check out the repository
         uses: actions/checkout@v5
 
-      - name: Set up Node.js 22
+      - name: Set Up · initialise Node.js 22
         uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
 
-      - name: Install dependencies
+      - name: Install Dependencies · npm ci
         run: npm ci
 
       # chromium is always installed, not just for the chromium job: global-setup launches a
       # chromium browser to capture the session, so every job needs it.
-      - name: Install Playwright browsers (chromium + ${{ matrix.project }})
+      - name: Install Dependencies · Playwright browsers (chromium + ${{ matrix.project }})
         run: npx playwright install --with-deps chromium ${{ matrix.project }}
 
-      # No credentials: global-setup registers its own throwaway account per run, keeping CI
-      # isolated from any developer's account. Only the target URLs are supplied.
-      - name: Register test account & run E2E suite
+      # No credentials are supplied: global-setup registers its own throwaway account per
+      # run, keeping CI isolated from any developer's account.
+      - name: Configure Environment · resolve target URLs
+        run: |
+          echo "Target UI  : ${BASE_URL:-<default>}"
+          echo "Target API : ${API_BASE_URL:-<default>}"
+          echo "Credentials: none supplied - global-setup will register an account"
+        env:
+          BASE_URL: ${{ secrets.BASE_URL }}
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+
+      - name: Test Running · execute the suite on ${{ matrix.project }}
         run: npx playwright test --project=${{ matrix.project }}
         env:
           BASE_URL: ${{ secrets.BASE_URL }}
           API_BASE_URL: ${{ secrets.API_BASE_URL }}
           PLAYWRIGHT_JSON_OUTPUT_NAME: results.json
 
-      - name: Generate run summary
+      - name: Test Complete · collect results, traces and screenshots
+        if: ${{ !cancelled() }}
+        run: |
+          echo "Artifacts produced by this run:"
+          ls -1 results.json smart-report.html 2>/dev/null || true
+          [ -d test-results ] && echo "test-results/ (traces, videos, screenshots)" || true
+          [ -d failures ] && echo "failures/ (durable failure evidence)" || true
+
+      - name: Report Generate · build the ${{ matrix.project }} summary table
         if: ${{ !cancelled() }}
         run: node .github/scripts/summarise.mjs "${{ matrix.project }}"
 
-      - name: Upload smart HTML report
+      - name: Publish Results · upload the HTML report
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7
         with:
           name: report-${{ matrix.project }}
           path: |
             smart-report.html
-            playwright-report/
+            results.json
           retention-days: 30
 
-      - name: Upload failure evidence (traces, videos, screenshots)
+      - name: Publish Results · upload failure evidence
         if: failure()
         uses: actions/upload-artifact@v7
         with:
@@ -93,26 +112,30 @@ jobs:
             failures/
           retention-days: 30
 
-  summary:
-    name: Results summary
+  # ── 7. Review & share ────────────────────────────────────────────────────────
+  publish:
+    name: 3 · Report review & share
     runs-on: ubuntu-latest
-    needs: [verify, test]
+    needs: [setup, test]
     if: ${{ !cancelled() }}
     steps:
-      - name: Report matrix outcome
+      - name: Report Review & Share · combine every browser's outcome
         run: |
           {
-            echo "## Playwright E2E — all browsers"
+            echo "## Playwright E2E — run complete"
             echo ""
-            echo "| Job | Outcome |"
+            echo "| Stage | Outcome |"
             echo "|---|---|"
-            echo "| Lint & typecheck | ${{ needs.verify.result }} |"
-            echo "| E2E matrix (chromium, firefox, webkit) | ${{ needs.test.result }} |"
+            echo "| 1 · Setup & static checks | ${{ needs.setup.result }} |"
+            echo "| 2 · E2E across chromium, firefox, webkit | ${{ needs.test.result }} |"
             echo ""
-            echo "Per-browser counts are in each job's own summary."
-            echo "HTML reports and failure evidence are attached as run artifacts."
+            echo "Per-browser counts appear in each E2E job's own summary."
+            echo "HTML reports and failure evidence are attached to this run as artifacts."
+            echo ""
+            echo "Known product defects are asserted with \`test.fail\`: they execute, fail as"
+            echo "expected, and count as passed. Each is documented under \`findings/\`."
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Fail if any browser failed
+      - name: Report Review & Share · fail the run if any browser failed
         if: ${{ needs.test.result != 'success' }}
         run: exit 1
