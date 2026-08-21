@@ -39,7 +39,7 @@ test('TC-03: Verify that an existing article can be edited', { tag: ['@critical'
   const updated = newArticle();
   cleanupArticle(updated.title);
 
-  await articlePage.openArticleInEditor(seededArticle.slug, seededArticle.title);
+  await articlePage.openArticleInEditor(seededArticle.slug, seededArticle.title); // article created via API as a pre-condition
 
   await articlePage.editArticle(updated.title, updated.body);
 
@@ -50,7 +50,7 @@ test('TC-03: Verify that an existing article can be edited', { tag: ['@critical'
 });
 
 test('TC-04: Verify that clearing the title does not overwrite a saved article', { tag: ['@regression'] }, async ({ articlePage, articleAsserts, seededArticle }) => {
-  await articlePage.openArticleInEditor(seededArticle.slug, seededArticle.title);
+  await articlePage.openArticleInEditor(seededArticle.slug, seededArticle.title); // article created via API as a pre-condition
 
   await articlePage.clearTitle();
   await articlePage.clickPublishButton();
@@ -60,7 +60,7 @@ test('TC-04: Verify that clearing the title does not overwrite a saved article',
 });
 
 test('TC-05: Verify that an article can be deleted by its author', { tag: ['@critical'] }, async ({ articlePage, articleAsserts, seededArticle }) => {
-  await articlePage.openArticleDetail(seededArticle.slug, seededArticle.title);
+  await articlePage.openArticleDetail(seededArticle.slug, seededArticle.title); // article created via API as a pre-condition
 
   await articlePage.clickDeleteArticleButton();
 
@@ -166,7 +166,7 @@ test('TC-13: Verify that a title at the maximum accepted length is published', {
 
 test('TC-14: Verify that a duplicate article title is rejected', { tag: ['@regression'] }, async ({ articlePage, seededArticle }) => {
   await articlePage.navigateToEditor();
-  await articlePage.createArticle(newArticle({ title: seededArticle.title }));
+  await articlePage.createArticle(newArticle({ title: seededArticle.title })); // article created via API as a pre-condition
 
   await articlePage.expectDuplicateTitleError();
   await articlePage.expectStillOnEditor();
