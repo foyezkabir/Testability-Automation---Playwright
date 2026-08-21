@@ -21,20 +21,20 @@ INPUT VALIDATION & BOUNDARIES (beyond the brief's "at least one negative")
 The brief asks for one negative case per scenario, which TC-02 satisfies. The
 rows below go further. Evidence: findings/settings.txt
 
-  Whitespace-only username        -> TC-04  @regression @known-defect  FIXME
-  Invalid profile picture URL     -> TC-05  @regression @known-defect  FIXME
-  Form repopulates on return      -> TC-06  @regression @known-defect  FIXME
+  Whitespace-only username        -> TC-04  @regression @known-defect  EXPECTED-FAIL
+  Invalid profile picture URL     -> TC-05  @regression @known-defect  EXPECTED-FAIL
+  Form repopulates on return      -> TC-06  @regression @known-defect  EXPECTED-FAIL
   Long bio (2000 chars)           -> TC-07  @regression
   Script markup in bio (XSS)      -> TC-08  @critical
   Whitespace-only bio             -> TC-09  @regression
 
-FIXME rows use test.fixme: they assert what the app SHOULD do, are reported as
+FIXME rows use test.fail: they assert what the app SHOULD do, are reported as
 expected-to-fail rather than executed, and do not turn the suite red. Remove the
-fixme line once the defect is fixed and the test starts guarding it.
+marker once the defect is fixed and the test starts guarding it.
 List them with: npx playwright test --grep @known-defect
 
 Coverage: 1/1 required scenario (100%) · 1/1 negative case (100%) · 0 gaps
-Tests in this module: 9 (6 executed, 3 test.fixme documenting known defects)
+Tests in this module: 9 (6 executed, 3 test.fail documenting known defects)
 
 NOT COVERED, AND WHY (recorded so absence is deliberate, not an oversight)
 -------------------------------------------------------------------------------

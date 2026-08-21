@@ -16,8 +16,11 @@ failures/
 # baselines are text-only; never images
 baselines/**/*.png
 
-# local-only working files
+# local-only working files - authoring tooling, not part of the deliverable
 ASSIGNMENT.txt
+.claude/
+.mcp.json
+CLAUDE.md
 .claude/settings.local.json
 agent-enhancements.txt
 claude-code-extensibility-reference.txt

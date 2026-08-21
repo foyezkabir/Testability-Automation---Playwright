@@ -31,22 +31,22 @@ The brief asks for one negative case per scenario, which TC-02/04/06/08 satisfy.
 The rows below go further, probing boundaries and malformed input. Evidence for
 each: findings/articles.txt
 
-  Whitespace-only article           -> TC-10  @regression @known-defect  FIXME
-  Whitespace description/body       -> TC-11  @regression @known-defect  FIXME
-  Title over the length limit (186) -> TC-12  @regression @known-defect  FIXME
+  Whitespace-only article           -> TC-10  @regression @known-defect  EXPECTED-FAIL
+  Whitespace description/body       -> TC-11  @regression @known-defect  EXPECTED-FAIL
+  Title over the length limit (186) -> TC-12  @regression @known-defect  EXPECTED-FAIL
   Title at the limit (185)          -> TC-13  @regression
   Duplicate title                   -> TC-14  @regression
   Single-character title            -> TC-15  @regression
   Unicode + emoji title             -> TC-16  @regression
   SQL-like text in a title          -> TC-17  @regression @critical
   Script markup rendering (XSS)     -> TC-18  @critical
-  Duplicate tags                    -> TC-19  @regression @known-defect  FIXME
-  Whitespace-only tag               -> TC-20  @regression @known-defect  FIXME
+  Duplicate tags                    -> TC-19  @regression
+  Whitespace-only tag               -> TC-20  @regression
   Large tag count (50)              -> TC-21  @regression
 
-FIXME rows use test.fixme: they assert what the app SHOULD do, are reported as
-expected-to-fail rather than executed, and do not turn the suite red. Remove the
-fixme line once the defect is fixed and the test starts guarding it.
+EXPECTED-FAIL rows use test.fail: they RUN, assert what the app SHOULD do, and are
+reported as expected failures rather than turning the suite red. If a defect is
+fixed the test becomes a genuine failure, telling you to remove the marker.
 List them with: npx playwright test --grep @known-defect
 
 API PRE-CONDITION REQUIREMENT (brief section 2, explicit)
@@ -60,7 +60,7 @@ API PRE-CONDITION REQUIREMENT (brief section 2, explicit)
                    removed via API teardown (`cleanupArticle`).
 
 Coverage: 4/4 required scenarios (100%) · 4/4 negative cases (100%) · 0 gaps
-Tests in this module: 21 (16 executed, 5 test.fixme documenting known defects)
+Tests in this module: 21 (all executed; 3 are test.fail documenting known defects)
 
 NOT COVERED, AND WHY (recorded so absence is deliberate, not an oversight)
 -------------------------------------------------------------------------------

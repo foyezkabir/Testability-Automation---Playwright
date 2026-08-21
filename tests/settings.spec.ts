@@ -37,7 +37,7 @@ test.describe('Profile settings', () => {
   });
 
   test('TC-04: Verify that a whitespace-only username is rejected with a visible error', { tag: ['@regression', '@known-defect'] }, async ({ settingsPage, restoredProfile }) => {
-    test.fixme(true, 'findings/settings.txt FINDING 6 - returns HTTP 500 leaking the DB constraint name, and the UI shows nothing');
+    test.fail(true, 'findings/settings.txt FINDING 6 - returns HTTP 500 leaking the DB constraint name, and the UI shows nothing');
 
     await settingsPage.navigateToSettings();
     await settingsPage.submitWithUsername(SETTINGS_EDGE.whitespaceUsername);
@@ -47,7 +47,7 @@ test.describe('Profile settings', () => {
   });
 
   test('TC-05: Verify that an invalid profile picture URL is rejected', { tag: ['@regression', '@known-defect'] }, async ({ settingsPage, userAsserts, restoredProfile }) => {
-    test.fixme(true, 'findings/settings.txt FINDING 7 - any string is accepted and used as the avatar source, leaving a broken image');
+    test.fail(true, 'findings/settings.txt FINDING 7 - any string is accepted and used as the avatar source, leaving a broken image');
 
     await settingsPage.navigateToSettings();
     await settingsPage.submitWithProfileImage(ACCOUNT.username, SETTINGS_EDGE.invalidImageUrl);
@@ -57,7 +57,7 @@ test.describe('Profile settings', () => {
   });
 
   test('TC-06: Verify that the settings form is repopulated with the stored values on return', { tag: ['@regression', '@known-defect'] }, async ({ settingsPage, restoredProfile }) => {
-    test.fixme(true, 'findings/settings.txt FINDING 2 - the form always renders blank, so a user cannot see or safely edit their own data');
+    test.fail(true, 'findings/settings.txt FINDING 2 - the form always renders blank, so a user cannot see or safely edit their own data');
 
     const update = profileUpdate();
 

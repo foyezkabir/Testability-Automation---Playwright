@@ -371,7 +371,7 @@ Confidence: high - both surfaces re-verified independently. Severity stays low: 
   user driving the UI cannot reach the bad state, and no data is lost.
 
 Consequence for the suite: TC-19 and TC-20 assert the EDITOR behaviour and now
-  PASS, so their test.fixme markers were removed - a fixme on a passing test
+  PASS, so their expected-failure markers were removed - such a marker on a passing test
   misreports the state of the app. The API-side gap has no UI test because it is
   not reachable through the interface.
 

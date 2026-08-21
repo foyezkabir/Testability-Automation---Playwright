@@ -33,14 +33,14 @@ Same file (`tests/settings.spec.ts`) deliberately: **every** profile-mutating te
 one serial group, because Conduit gives an account a single mutable profile. Splitting them
 across files reintroduces a race - separate files still run in parallel.
 
-Rows marked **fixme** assert what the app SHOULD do and are reported as expected-to-fail
-via `test.fixme`, carrying `@known-defect`. Evidence: `findings/settings.txt`.
+Rows marked **test.fail** assert what the app SHOULD do and are reported as expected-to-fail
+via `test.fail`, carrying `@known-defect`. Evidence: `findings/settings.txt`.
 
 | TC | View × state × action | Tag | Fixture | Key assertions |
 |---|---|---|---|---|
-| TC-04 | `/settings` · error · submit a whitespace-only username | `@regression @known-defect` **fixme** | `restoredProfile` (A) | a visible validation message appears and the user stays on `/settings`. **Currently fails: FINDING 6** - returns HTTP 500 leaking the `User_username_key` constraint, with nothing shown to the user |
-| TC-05 | `/settings` · disabled/invalid · submit `not-a-url` as the profile picture | `@regression @known-defect` **fixme** | `restoredProfile` (A) | rejected with a visible error; the value is never stored as the avatar. **Currently fails: FINDING 7** |
-| TC-06 | `/settings` · populated · save, then return to the form | `@regression @known-defect` **fixme** | `restoredProfile` (A) | all three fields show the stored values on return. **Currently fails: FINDING 2** - the form always renders blank, so a user can neither see nor safely edit their own data |
+| TC-04 | `/settings` · error · submit a whitespace-only username | `@regression @known-defect` **test.fail** | `restoredProfile` (A) | a visible validation message appears and the user stays on `/settings`. **Currently fails: FINDING 6** - returns HTTP 500 leaking the `User_username_key` constraint, with nothing shown to the user |
+| TC-05 | `/settings` · disabled/invalid · submit `not-a-url` as the profile picture | `@regression @known-defect` **test.fail** | `restoredProfile` (A) | rejected with a visible error; the value is never stored as the avatar. **Currently fails: FINDING 7** |
+| TC-06 | `/settings` · populated · save, then return to the form | `@regression @known-defect` **test.fail** | `restoredProfile` (A) | all three fields show the stored values on return. **Currently fails: FINDING 2** - the form always renders blank, so a user can neither see nor safely edit their own data |
 | TC-07 | `/settings` · populated · save a 2000-character bio | `@regression` | `restoredProfile` (A) | saves successfully and is stored without truncation. Upper boundary - no limit exists and none is needed here, unlike the article title where the missing limit crashes the server |
 | TC-08 | `/profile/:username` · populated · view a profile whose bio contains script markup | `@critical` | `restoredProfile` (A) | no native dialog fires when the profile page renders the bio. This is the render check that RESOLVED the bio XSS question as **not exploitable** |
 | TC-09 | `/settings` · populated · save a whitespace-only bio | `@regression` | `restoredProfile` (A) | accepted and stored. Documents the real contract: whitespace is the ONLY way to blank a bio, because `''` and `null` are silently ignored (FINDING 5). This is also why the restore fixture writes a single space |

@@ -6,13 +6,16 @@ End-to-end automation for **https://conduit.bondaracademy.com/** built with Play
 run is easy to watch; CI runs all three browsers headless and fully parallel (72 runs,
 ~1.7 min).
 
-- **24 execute** and assert the app's behaviour.
-- **6 are `test.fixme`**, documenting known product defects: they assert the *correct*
-  behaviour, report as expected-to-fail rather than red, and turn green the day each bug is
-  fixed. List them with `npx playwright test --grep @known-defect`.
+**Every test executes** - nothing is skipped.
 
-Latest run: **60 passed · 12 skipped · 0 failed**.
-(Skipped = the fixme cases, counted once per browser project.)
+- **24** assert the app's behaviour and pass.
+- **6** are marked `test.fail` and tagged `@known-defect`: they assert what the app
+  *should* do, run for real, and are reported as expected failures. If a defect is ever
+  fixed, the test turns into a genuine failure telling you to remove the marker - which is
+  why `test.fail` was chosen over `test.fixme`, since a skipped test proves nothing.
+  List them with `npx playwright test --grep @known-defect`.
+
+Latest run: **72 passed · 0 skipped · 0 failed**.
 
 ---
 
@@ -100,8 +103,8 @@ Supported by:
 | `traceability/` | requirement → test mapping |
 
 Specs import **only** `fixtures/base.ts`. They contain no `if`, no loops, no `try/catch`
-and no data-building - that is enforced mechanically by ESLint on every write, not by
-convention.
+and no data-building - enforced mechanically by a custom ESLint ruleset
+(`eslint.config.mjs` + `qa-rules.mjs`), not by convention. Run it with `npm run lint`.
 
 ### Session management (requirement 3.2)
 
@@ -181,7 +184,7 @@ fully isolated - it never shares an account with a developer's machine.
 ## Defects found
 
 Exploring the app surfaced **19 product defects** - 12 in articles, 7 in settings -
-recorded one file per module in [findings/](findings/). Eight are also encoded as `test.fixme` cases
+recorded one file per module in [findings/](findings/). Six are also encoded as `test.fail` cases
 tagged `@known-defect`: they assert the correct behaviour, are reported as
 expected-to-fail, and turn green the day the bug is fixed (`--grep @known-defect`).
 These are notes for a human to triage, not filed anywhere. Several changed the test
@@ -240,12 +243,3 @@ own initial conclusion that tag indexing was merely *lagging* (it never resolves
 
 Both are recorded in [findings/articles.txt](findings/articles.txt) so the corrections are
 auditable rather than invisible.
-
----
-
-## Repository layout
-
-| Document | What it covers |
-|---|---|
-| `README.md` | this file - the assignment solution |
-| [CLAUDE.md](CLAUDE.md) | the authoring rules enforced by the ESLint ruleset and git hooks in `.claude/` |

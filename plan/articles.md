@@ -37,15 +37,15 @@ Decided by the entity's ROLE in each test, not by the action name:
 Derived from a dedicated edge-case probe of the article endpoints; evidence for every row
 is in `findings/articles.txt`.
 
-Rows marked **fixme** assert what the app SHOULD do and are reported as expected-to-fail
-via `test.fixme`, so a known defect is visible in the report without turning the suite red.
+Rows marked **test.fail** assert what the app SHOULD do and are reported as expected-to-fail
+via `test.fail`, so a known defect is visible in the report without turning the suite red.
 They carry `@known-defect` and are listable with `--grep @known-defect`.
 
 | TC | View × state × action | Tag | Fixture | Key assertions |
 |---|---|---|---|---|
-| TC-10 | `/editor` · disabled/invalid · publish with every text field whitespace-only | `@regression @known-defect` **fixme** | none | a whitespace title is treated as blank; the blank-title error shows; no navigation away from `/editor`. **Currently fails: FINDING 8** - accepted with 201 and the slug collapses to `-64987` |
-| TC-11 | `/editor` · disabled/invalid · publish with whitespace-only description and body | `@regression @known-defect` **fixme** | `cleanupArticle` (B) | whitespace content is rejected exactly as empty content is. **Currently fails: FINDING 10** |
-| TC-12 | `/editor` · error · publish a title of 186 characters | `@regression @known-defect` **fixme** | none | a user-facing validation error appears and the message does not leak the ORM/schema. **Currently fails: FINDING 9** - returns HTTP 500 naming the Prisma call and the `slug` column |
+| TC-10 | `/editor` · disabled/invalid · publish with every text field whitespace-only | `@regression @known-defect` **test.fail** | none | a whitespace title is treated as blank; the blank-title error shows; no navigation away from `/editor`. **Currently fails: FINDING 8** - accepted with 201 and the slug collapses to `-64987` |
+| TC-11 | `/editor` · disabled/invalid · publish with whitespace-only description and body | `@regression @known-defect` **test.fail** | `cleanupArticle` (B) | whitespace content is rejected exactly as empty content is. **Currently fails: FINDING 10** |
+| TC-12 | `/editor` · error · publish a title of 186 characters | `@regression @known-defect` **test.fail** | none | a user-facing validation error appears and the message does not leak the ORM/schema. **Currently fails: FINDING 9** - returns HTTP 500 naming the Prisma call and the `slug` column |
 | TC-13 | `/editor` · populated · publish a title at the 185-character limit | `@regression` | `cleanupArticle` (B) | publishes successfully; the full title is stored intact. Guards the measured upper boundary so a regression that lowers it is caught |
 | TC-14 | `/editor` · error · publish a title already in use | `@regression` | `seededArticle` (A) | rejected with `must be unique`; stays on `/editor`. The slug derives from the title, so duplicates would collide |
 | TC-15 | `/editor` · populated · publish a single-character title | `@regression` | `cleanupArticle` (B) | accepted - the app enforces no minimum length. Documents the real contract rather than a rule the app lacks |
