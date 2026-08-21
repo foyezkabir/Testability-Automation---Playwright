@@ -38,21 +38,33 @@ export const test = base.extend<{
   },
 
   seededArticle: async ({ articles }, use) => {
-    const seeded = await articles.create(newArticle());
+    const article = newArticle();
+    const seeded = await articles.create(article);
     await use(seeded);
-    // A test may have renamed this article, which also changes its slug - so resolve by
-    // description, and try the original slug for the untouched case.
-    const currentSlugs = await articles.findSlugsByDescription(seeded.description, seeded.author.username);
-    await articles.removeMany([...currentSlugs, seeded.slug]);
+    // TC-03 renames this article, which also changes its slug, so the seeded slug alone is
+    // not enough. Match on the random suffix of BOTH the original title and whatever the
+    // test renamed it to - the same mechanism cleanupArticle uses, and parallel-safe.
+    await articles.removeMany([seeded.slug]);
+    await articles.removeByTitlePrefix([article.title], seeded.author.username);
   },
 
   cleanupArticle: async ({ articles }, use) => {
+    // Delete by SLUG PREFIX, derived from the title the spec registers.
+    //
+    // Two earlier approaches failed. Exact title lookup missed, because the app does not
+    // always store the title verbatim - that leaked 45 articles which then polluted the
+    // feed the tests read from. Diffing all owned slugs before/after fixed the leak but is
+    // not parallel-safe: a worker's "after" snapshot contains articles another worker is
+    // still using, so it deleted them mid-test.
+    //
+    // The slug is `<slugified-title>-<userId>`, and every factory title carries a random
+    // suffix, so a prefix match is both unique to this test and immune to how the app
+    // normalises the title.
     const titles: string[] = [];
     await use((title: string) => {
       titles.push(title);
     });
-    const slugs = await Promise.all(titles.map((title) => articles.findSlugByTitle(title, ACCOUNT.username)));
-    await articles.removeMany(slugs.filter((slug): slug is string => Boolean(slug)));
+    await articles.removeByTitlePrefix(titles, ACCOUNT.username);
   },
 
   restoredProfile: async ({ users }, use) => {
