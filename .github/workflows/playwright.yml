@@ -24,7 +24,7 @@ jobs:
           cache: npm
 
       - name: Install Dependencies · npm ci
-        run: npm ci
+        run: npm ci --no-fund --loglevel=error
 
       - name: Configure Environment · verify the four tiers resolve
         run: npm run typecheck
@@ -55,7 +55,7 @@ jobs:
           cache: npm
 
       - name: Install Dependencies · npm ci
-        run: npm ci
+        run: npm ci --no-fund --loglevel=error
 
       # chromium is always installed, not just for the chromium job: global-setup launches a
       # chromium browser to capture the session, so every job needs it.
