@@ -35,8 +35,9 @@ test('TC-02: Verify that publishing an article with no fields filled is rejected
   await articlePage.expectStillOnEditor();
 });
 
-test('TC-03: Verify that an existing article can be edited', { tag: ['@critical'] }, async ({ articlePage, seededArticle }) => {
+test('TC-03: Verify that an existing article can be edited', { tag: ['@critical'] }, async ({ articlePage, seededArticle, cleanupArticle }) => {
   const updated = newArticle();
+  cleanupArticle(updated.title);
 
   await articlePage.openArticleInEditor(seededArticle.slug, seededArticle.title);
 
@@ -154,14 +155,16 @@ test('TC-12: Verify that an over-long article title is rejected without a server
 });
 
 test('TC-13: Verify that a title at the maximum accepted length is published', { tag: ['@regression'] }, async ({ articlePage, cleanupArticle }) => {
-  const article = newArticle({ title: ARTICLE_EDGE.maxAcceptedTitle });
-  cleanupArticle(article.title);
+  const article = newArticle();
+  const longTitle = `${ARTICLE_EDGE.maxAcceptedTitle.slice(0, 160)} ${article.title.split(' ').pop()}`;
+  const longArticle = { ...article, title: longTitle };
+  cleanupArticle(longTitle);
 
   await articlePage.navigateToEditor();
-  await articlePage.createArticle(article);
+  await articlePage.createArticle(longArticle);
 
   await articlePage.expectRedirectedToArticle();
-  await articlePage.expectArticleTitle(article.title);
+  await articlePage.expectArticleTitle(longTitle);
 });
 
 test('TC-14: Verify that a duplicate article title is rejected', { tag: ['@regression'] }, async ({ articlePage, seededArticle }) => {
