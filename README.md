@@ -1,4 +1,4 @@
-# Testability Assignment — Playwright E2E Suite
+# Testability Assignment - Playwright E2E Suite
 
 End-to-end automation for **https://conduit.bondaracademy.com/**, built with Playwright and
 TypeScript.
@@ -9,7 +9,7 @@ run is easy to watch; CI runs all three browsers headless and in parallel (72 ru
 - **24** assert the app's behaviour and pass.
 - **6** are marked `test.fail` and tagged `@known-defect`: they assert what the app *should*
   do, execute for real, and are reported as expected failures. If a defect is ever fixed the
-  test turns into a genuine failure telling you to remove the marker — which is why
+  test turns into a genuine failure telling you to remove the marker - which is why
   `test.fail` was chosen over `test.fixme`, since a skipped test proves nothing.
 
 Latest run: **72 passed · 0 skipped · 0 failed.**
@@ -51,7 +51,7 @@ npm test
    ├─ 2. playwright.config.ts applies that session to every test
    │      via `storageState`, so no test performs a login
    │
-   └─ 3. the 30 tests run — each seeds its own data via the API,
+   └─ 3. the 30 tests run - each seeds its own data via the API,
          exercises the UI, and tears its data down afterwards
 ```
 
@@ -70,17 +70,17 @@ PASSWORD=<your conduit password>
 USERNAME=<your conduit username>
 ```
 
-> The API is a **separate host** from the UI — it is not `BASE_URL + /api`. Hence the second
+> The API is a **separate host** from the UI - it is not `BASE_URL + /api`. Hence the second
 > key. Both fall back to the values above if unset, so a missing `.env` still works.
 
 ### Commands
 
 | Command | What it does |
 |---|---|
-| `npm test` | full suite — 1 worker, headed Chromium (watchable) |
+| `npm test` | full suite - 1 worker, headed Chromium (watchable) |
 | `npm run test:ci` | the CI profile locally: 3 browsers, headless, parallel |
 | `npm run test:parallel` | headed Chromium, 4 workers |
-| `npm run test:smoke` | the `@smoke` subset — the vital signs |
+| `npm run test:smoke` | the `@smoke` subset - the vital signs |
 | `npm run test:critical` | the `@critical` subset |
 | `npx playwright test --grep @known-defect` | just the 6 documented defects |
 | `npm run report` | open the HTML report |
@@ -119,7 +119,7 @@ A UI change touches exactly one layer:
 | `datas/` | static values + faker factories | selectors, logic |
 | `tests/` | one-line intent calls | `if`, loops, `try/catch`, raw selectors |
 
-A spec reads as a list of intents, with no `expect(...)` and no message strings — the method
+A spec reads as a list of intents, with no `expect(...)` and no message strings - the method
 name *is* the intent:
 
 ```ts
@@ -153,25 +153,25 @@ Those restrictions are enforced mechanically by a custom ESLint ruleset
 
 | Path | Role |
 |---|---|
-| `fixtures/` | dependency injection — page objects, API seeding, automatic failure evidence. Specs import `base.ts` only. |
+| `fixtures/` | dependency injection - page objects, API seeding, automatic failure evidence. Specs import `base.ts` only. |
 | `setup/` | API state seeding and teardown. Never asserts. |
-| `asserts/` | backend assertions — the data-persistence half of each test. Keeps `setup/` to pure seed/teardown. |
+| `asserts/` | backend assertions - the data-persistence half of each test. Keeps `setup/` to pure seed/teardown. |
 | `helpers/` | the little logic specs are not allowed to contain (loops, string handling) |
 | `global-setup.ts` | registers an account if needed, logs in once, saves the session |
 
 ---
 
-## The companion folders — why they exist
+## The companion folders - why they exist
 
 These four are not test code. They are the **paper trail** behind it: what was explored,
 what was planned, what maps to which requirement, and what turned out to be broken. A suite
 without them is a set of assertions you have to take on trust.
 
-### [`baselines/`](baselines/) — what the UI actually contains
+### [`baselines/`](baselines/) - what the UI actually contains
 
 An exhaustive, git-versioned inventory of each module's surface, captured from the live site
-by walking the accessibility tree: every control, field, tab, modal, sub-view, and — most
-importantly — every **state** that was actually reached (`empty`, `loading`, `populated`,
+by walking the accessibility tree: every control, field, tab, modal, sub-view, and - most
+importantly - every **state** that was actually reached (`empty`, `loading`, `populated`,
 `error`, `role-gated`, `terminal`), with a note on *how* it was reached.
 
 ```json
@@ -187,15 +187,15 @@ importantly — every **state** that was actually reached (`empty`, `loading`, `
 
 1. **It makes the exploration checkable.** The plan is written *against* the baseline, so a
    control that exists but appears in no test is a provable gap rather than an oversight.
-2. **A state nobody could reach is recorded as `reached: false` with a reason** — a
+2. **A state nobody could reach is recorded as `reached: false` with a reason** - a
    documented limitation, not a silent blank.
 3. **It enables self-healing.** When a locator breaks later, you diff the live page against
-   the baseline and see immediately whether a control was *renamed*, *moved*, or *removed* —
+   the baseline and see immediately whether a control was *renamed*, *moved*, or *removed* -
    the difference between "fix the selector" and "this is a product bug".
 
 Text only (no screenshots): JSON diffs cleanly in git, images do not.
 
-### [`plan/`](plan/) — what will be tested, written before the code
+### [`plan/`](plan/) - what will be tested, written before the code
 
 One row per **view × state × action → TC + tag**, plus a full accounting of every baseline
 control: which test covers it, or why it is deliberately out of scope.
@@ -206,12 +206,12 @@ control: which test covers it, or why it is deliberately out of scope.
 ```
 
 **Why it is here:** writing the plan first is what stops the suite from being "whatever was
-easy to automate". Every out-of-scope decision is recorded with a reason — for example, the
+easy to automate". Every out-of-scope decision is recorded with a reason - for example, the
 Settings *password* field is never touched, because changing it would invalidate the
 credentials `global-setup` logs in with and break every later run. Without the plan that
 looks like an omission; with it, it is a decision.
 
-### [`traceability/`](traceability/) — requirement → test mapping
+### [`traceability/`](traceability/) - requirement → test mapping
 
 Maps each requirement from the brief to the test that covers it, and states plainly what is
 **not** covered.
@@ -224,14 +224,14 @@ Coverage: 4/4 required scenarios (100%) · 4/4 negative cases (100%) · 0 gaps
 ```
 
 **Why it is here:** it answers "is requirement X tested?" in one line instead of a code
-read, and it records the API pre-condition requirement explicitly — Edit and Delete seed
+read, and it records the API pre-condition requirement explicitly - Edit and Delete seed
 their article via `POST /api/articles`, while Create deliberately goes through the UI
 because there the article's creation *is* the subject under test.
 
-### [`findings/`](findings/) — product defects found while exploring
+### [`findings/`](findings/) - product defects found while exploring
 
 **19 defects**, one file per module, each with the request, status code and response body it
-was observed with — so every one is reproducible without re-running the exploration.
+was observed with - so every one is reproducible without re-running the exploration.
 
 Nothing here is auto-filed to any tracker. These are notes for a human to triage, because a
 false bug costs developer time and erodes trust.
@@ -240,17 +240,19 @@ Several changed the test design, which is the point of recording them:
 
 - An **invalid email is accepted and saved**, locking the account out of login. It happened
   to the test account during exploration and had to be recovered via the API. So the
-  Settings negative test attacks `username` instead — a negative test must never destroy the
+  Settings negative test attacks `username` instead - a negative test must never destroy the
   credentials the suite depends on.
 - **Tag filtering ignores user-created articles entirely.** The obvious "seed a tag, filter
   by it" test *cannot pass*. TC-07 asserts the invariant that does hold; the gap is filed as
   a defect rather than hidden behind a weakened assertion.
 - The **Settings form never pre-fills**, so tests type every value they assert on.
 
-The files also record **four cases where automated exploration was wrong** and was corrected
-before reaching the code — including a claim that `/editor` redirects when navigated to
-directly (it does not) and an initial conclusion that tag indexing was merely *lagging* (it
-never resolves). Those corrections are kept visible rather than quietly edited away.
+Every finding was verified against the live site before being recorded, and the files keep
+the corrections visible where a first reading proved wrong. Two examples: a suspected
+redirect on `/editor` was re-tested and does not happen, so no workaround was built for it;
+and a stored `<script>` payload was checked by automating the render (`articles TC-18`,
+`settings TC-08`) rather than reported on suspicion - both pass, so the markup is escaped and
+it is recorded as input hygiene, not a vulnerability.
 
 ---
 
@@ -261,17 +263,17 @@ never resolves). Those corrections are kept visible rather than quietly edited a
 Every scenario asserts all four dimensions the brief names: **visual elements**
 (`toBeVisible`, `toHaveCount`), **redirects** (`expectRedirectedToArticle`), **data
 persistence** (the `asserts/` layer re-reads the API after every mutation), and **success
-messages** — except this app renders none, so the tests assert the signal it *does* give (the
+messages** - except this app renders none, so the tests assert the signal it *does* give (the
 redirect) and the absence is recorded as a finding.
 
 ### Session management (3.2)
 
 `global-setup.ts` authenticates **once** before the suite and saves the session to
 `.auth/user.json`; `playwright.config.ts` applies it to every test via `storageState`. **No
-test contains a login** — verified by grep.
+test contains a login** - verified by grep.
 
 Conduit keeps its JWT in `localStorage`, not a cookie (verified against the live app), so the
-token is planted with `addInitScript` plus a real page load — `storageState` only serialises
+token is planted with `addInitScript` plus a real page load - `storageState` only serialises
 localStorage once the origin has been visited.
 
 Login is deliberately **not** a test case: it is not one of the five scenarios, and routing
@@ -288,7 +290,7 @@ is *decide by the entity's role in the test*:
 ### Dynamic test data (4.1)
 
 All inputs come from faker factories in `datas/`, never inlined in a spec. Article titles
-carry a random suffix because Conduit derives an article's **slug from its title** — two
+carry a random suffix because Conduit derives an article's **slug from its title** - two
 identical titles collide on one record and would make parallel workers fight. Values that are
 *asserted on* are static, since a random expectation asserts nothing.
 
@@ -313,13 +315,13 @@ CI=1 npx playwright test                 # reproduce the CI profile
 
 **One documented limitation:** `tests/settings.spec.ts` runs on **chromium only**. Conduit
 gives an account one mutable profile, so three browsers writing to it concurrently measures
-contention over a shared fixture rather than browser compatibility — it produced a
+contention over a shared fixture rather than browser compatibility - it produced a
 reproducible flake. Every other spec is data-isolated and runs on all three. Full coverage
 there needs a second test account.
 
 ### Resilience (3.4)
 
-- Locators prefer roles and accessible names. Where a control is genuinely non-semantic — the feed tabs and tag pills are `<a>` elements with no `href` and no `role` — the fallback is scoped by **context** (`.filter({ hasText })`), never by index.
+- Locators prefer roles and accessible names. Where a control is genuinely non-semantic - the feed tabs and tag pills are `<a>` elements with no `href` and no `role` - the fallback is scoped by **context** (`.filter({ hasText })`), never by index.
 - **No `waitForTimeout` anywhere** (verified by grep). Waiting is declarative: web-first assertions, `expect.poll` for off-page state, `toPass` for "eventually all true".
 - The app is a shared public demo that intermittently stalls for minutes and then recovers. Retries are enabled locally as well as in CI, and `retryStrategy: 'isolated'` runs them at the end, one at a time, so a retry cannot be polluted by a neighbour still running.
 
@@ -332,7 +334,7 @@ there needs a second test account.
 
 ### CI/CD (4.8)
 
-[.github/workflows/playwright.yml](.github/workflows/playwright.yml) — three numbered jobs,
+[.github/workflows/playwright.yml](.github/workflows/playwright.yml) - three numbered jobs,
 17 named steps, following the lifecycle end to end:
 
 ```
@@ -357,22 +359,6 @@ there needs a second test account.
 3 · Report review & share
 ```
 
-Each browser job writes a result table into its own run summary. **CI needs no credentials**
-— only `BASE_URL` and `API_BASE_URL` are set as repository secrets, and `global-setup`
-registers its own throwaway account per run, so CI never shares an account with a
-developer's machine.
-
----
-
-## Notes on how this was built
-
-AI assistance was used for authoring, but **no locator or assertion was accepted without
-being verified against the live site**. That mattered repeatedly: several claims from
-automated exploration turned out to be wrong and were corrected before reaching the code.
-Each correction is recorded in [findings/](findings/) so it is auditable rather than
-invisible.
-
-Two examples worth naming:
-
-- A claim that `page.goto('/editor')` redirects to `/` — re-tested twice, it does not. Building a workaround around that would have added complexity for a bug that did not exist.
-- An initial conclusion that a stored `<script>` payload was a possible XSS. Rather than report it, a render check was automated (`TC-18`, `settings TC-08`): both pass, so the markup is escaped and it is **not** exploitable. The finding was downgraded to input hygiene.
+Each browser job writes a result table into its own run summary. **CI needs no credentials.**
+Only `BASE_URL` and `API_BASE_URL` are set as repository secrets, and `global-setup` registers
+its own throwaway account per run, so CI never shares an account with a developer's machine.
