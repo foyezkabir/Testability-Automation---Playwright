@@ -2,7 +2,9 @@
 
 End-to-end automation for **https://conduit.bondaracademy.com/** built with Playwright + TypeScript.
 
-**30 test cases** across 2 modules, run on **3 browsers** - 72 test runs in ~1.8 min, fully parallel.
+**30 test cases** across 2 modules. Locally they run serially in a headed Chromium so a
+run is easy to watch; CI runs all three browsers headless and fully parallel (72 runs,
+~2 min).
 
 - **22 execute** and assert the app's behaviour.
 - **8 are `test.fixme`**, documenting known product defects: they assert the *correct*
@@ -47,8 +49,9 @@ To start over with a fresh account, clear `EMAIL` and `PASSWORD` in `.env` and r
 
 | Command | What it does |
 |---|---|
-| `npm test` | full suite, all three browsers |
-| `npm run test:chromium` | chromium only (fastest feedback) |
+| `npm test` | full suite - 1 worker, headed Chromium |
+| `npm run test:ci` | the CI profile locally: 3 browsers, headless, parallel |
+| `npm run test:parallel` | headed Chromium, 4 workers |
 | `npm run test:smoke` | the `@smoke` subset |
 | `npm run test:critical` | the `@critical` subset |
 | `npm run report` | open the HTML report |
@@ -126,6 +129,27 @@ titles carry a random suffix because Conduit derives an article's **slug from it
 two identical titles would collide on one record and make parallel workers fight. Values
 that are *asserted on* are static, since a random expectation asserts nothing.
 
+### Run profiles (requirements 4.5, 4.6)
+
+`playwright.config.ts` switches on the `CI` env var:
+
+| | Local (`npm test`) | CI |
+|---|---|---|
+| Workers | 1 | parallel |
+| Browsers | Chromium | Chromium + WebKit + Firefox |
+| Mode | headed | headless |
+
+Local defaults favour watching and debugging a run. CI is where cross-browser and parallel
+execution are demonstrated - see the Actions tab. Everything is overridable per run without
+editing the config:
+
+```bash
+npx playwright test --workers=4          # parallel locally
+npx playwright test --project=firefox    # a different browser
+npx playwright test --headed=0           # headless locally
+CI=1 npx playwright test                 # reproduce the CI profile
+```
+
 ### Resilience (requirement 3.4)
 
 - Locators prefer roles and accessible names; where a control is genuinely non-semantic, the fallback is scoped by **context** (`.filter({ hasText })`), never by index.
@@ -148,10 +172,9 @@ failure - traces, videos and screenshots as downloadable run artifacts.
 repository and its runs are visible under the Actions tab. Reviewing the code locally needs
 only the three commands in [Quick start](#quick-start) - no secrets, no CI access.
 
-CI reads its credentials from repository secrets (`BASE_URL`, `API_BASE_URL`, `EMAIL`,
-`PASSWORD`, `USERNAME`), configured once by the repository owner. Because those are set,
-auto-registration never triggers in CI - a scheduled run authenticates as a known, stable
-account instead of creating a new one on every trigger.
+CI needs no credentials: only `BASE_URL` and `API_BASE_URL` are set as repository
+variables, and `global-setup` registers its own throwaway account per run. That keeps CI
+fully isolated - it never shares an account with a developer's machine.
 
 ---
 

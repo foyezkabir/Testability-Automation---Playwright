@@ -9,8 +9,9 @@
     "typecheck": "tsc --noEmit",
     "test:smoke": "playwright test --grep @smoke",
     "test:critical": "playwright test --grep @critical",
-    "test:chromium": "playwright test --project=chromium",
-    "report": "playwright show-report"
+    "report": "playwright show-report",
+    "test:ci": "CI=1 playwright test",
+    "test:parallel": "playwright test --workers=4"
   },
   "repository": {
     "type": "git",
